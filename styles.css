@@ -702,6 +702,21 @@ section {
     color: var(--text-secondary);
 }
 
+/* Custom earthquake markers */
+.custom-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.custom-marker div {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.custom-marker div:hover {
+    transform: scale(1.1);
+}
+
 /* FAQ Section */
 .faq-section {
     padding: 5rem 0;

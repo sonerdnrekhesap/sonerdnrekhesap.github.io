@@ -154,35 +154,46 @@ function initMap() {
 
     // Setup controls
     const minMagSelect = document.getElementById('minMag');
+    const timeRangeSelect = document.getElementById('timeRange');
     const refreshBtn = document.getElementById('refreshMap');
 
+    const reloadMap = () => {
+        const minMag = parseFloat(minMagSelect?.value || 3.0);
+        const timeRange = timeRangeSelect?.value || 'last_7_days';
+        loadEarthquakes(minMag, false, timeRange);
+    };
+
     if (minMagSelect) {
-        minMagSelect.addEventListener('change', () => {
-            const minMag = parseFloat(minMagSelect.value);
-            loadEarthquakes(minMag);
-        });
+        minMagSelect.addEventListener('change', reloadMap);
+    }
+
+    if (timeRangeSelect) {
+        timeRangeSelect.addEventListener('change', reloadMap);
     }
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             const minMag = parseFloat(minMagSelect?.value || 3.0);
-            loadEarthquakes(minMag, true);
+            const timeRange = timeRangeSelect?.value || 'last_7_days';
+            loadEarthquakes(minMag, true, timeRange);
         });
     }
 
     // Initial load
     const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
-    loadEarthquakes(initialMinMag);
+    const initialTimeRange = timeRangeSelect?.value || 'last_7_days';
+    loadEarthquakes(initialMinMag, false, initialTimeRange);
 
     // Auto-refresh every 90 seconds
     updateInterval = setInterval(() => {
         const minMag = parseFloat(minMagSelect?.value || 3.0);
-        loadEarthquakes(minMag);
+        const timeRange = timeRangeSelect?.value || 'last_7_days';
+        loadEarthquakes(minMag, false, timeRange);
     }, 90000);
 }
 
 // Fetch earthquakes from API
-async function fetchEarthquakes(minMag = 3.0) {
+async function fetchEarthquakes(minMag = 3.0, timeRange = 'last_7_days') {
     // Abort previous request if still pending
     if (currentAbortController) {
         currentAbortController.abort();
@@ -190,7 +201,7 @@ async function fetchEarthquakes(minMag = 3.0) {
     currentAbortController = new AbortController();
 
     try {
-        const url = `${EQ_API_BASE_URL}?range=last_7_days&min_mw=${minMag}`;
+        const url = `${EQ_API_BASE_URL}?range=${timeRange}&min_mw=${minMag}`;
         const response = await fetch(url, {
             signal: currentAbortController.signal,
             headers: {
@@ -238,19 +249,19 @@ function normalizeEarthquakeData(data) {
 
 
 // Load and display earthquakes on map
-async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
+async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = 'last_7_days') {
     if (!map || !markersLayer) {
         console.warn('Map or markersLayer not initialized');
         return;
     }
 
     // Check cache
-    const cacheKey = `${minMag}-${Date.now() - (Date.now() % 90000)}`; // 90s cache window
+    const cacheKey = `${minMag}-${timeRange}-${Date.now() - (Date.now() % 90000)}`; // 90s cache window
     if (!forceRefresh && lastDataCache && lastDataCache.key === cacheKey) {
         return; // Use cached data
     }
 
-    const earthquakes = await fetchEarthquakes(minMag);
+    const earthquakes = await fetchEarthquakes(minMag, timeRange);
     if (!earthquakes || earthquakes.length === 0) {
         // Clear existing markers if no data
         markersLayer.clearLayers();
@@ -268,16 +279,38 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
 
     // Add new markers
     earthquakes.forEach(eq => {
-        const radius = Math.max(4, Math.min(20, 4 + eq.mag * 2));
+        const radius = Math.max(24, Math.min(40, 24 + eq.mag * 3));
         const color = getMagnitudeColor(eq.mag);
+        const magText = eq.mag.toFixed(1);
         
-        const marker = L.circleMarker([eq.lat, eq.lon], {
-            radius: radius,
-            fillColor: color,
-            color: '#fff',
-            weight: 2,
-            opacity: 0.9,
-            fillOpacity: 0.7
+        // Create custom icon with magnitude text inside
+        const iconHtml = `
+            <div style="
+                width: ${radius * 2}px;
+                height: ${radius * 2}px;
+                border-radius: 50%;
+                background-color: ${color};
+                border: 3px solid #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: ${radius > 30 ? '12px' : '10px'};
+                color: #fff;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            ">${magText}</div>
+        `;
+        
+        const customIcon = L.divIcon({
+            html: iconHtml,
+            className: 'custom-marker',
+            iconSize: [radius * 2, radius * 2],
+            iconAnchor: [radius, radius]
+        });
+        
+        const marker = L.marker([eq.lat, eq.lon], {
+            icon: customIcon
         });
 
         const timeStr = new Date(eq.timeISO).toLocaleString('tr-TR', {
@@ -290,7 +323,7 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
 
         marker.bindPopup(`
             <div style="min-width: 200px;">
-                <strong style="font-size: 1.1em; color: ${color};">M ${eq.mag.toFixed(1)}</strong><br>
+                <strong style="font-size: 1.1em; color: ${color};">M ${magText}</strong><br>
                 <strong>Derinlik:</strong> ${eq.depth.toFixed(1)} km<br>
                 <strong>Konum:</strong> ${eq.place}<br>
                 <strong>Zaman:</strong> ${timeStr}
