@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 
 // Configuration: Update this with your actual earthquake API endpoint
-const EQ_API_URL = window.EQ_API_URL || "PUT_YOUR_EQ_ENDPOINT_HERE";
+const EQ_API_URL = window.EQ_API_URL || "";
 
 // Map state
 let map = null;
@@ -108,9 +108,20 @@ let updateInterval = null;
 // Initialize map on DOM ready
 function initMap() {
     const mapElement = document.getElementById('map');
-    if (!mapElement || typeof L === 'undefined') {
-        console.warn('Map element or Leaflet not available');
+    if (!mapElement) {
+        console.error('Map element not found');
         return;
+    }
+
+    if (typeof L === 'undefined') {
+        console.error('Leaflet library not loaded');
+        return;
+    }
+
+    // Ensure map element has dimensions
+    if (mapElement.offsetHeight === 0) {
+        console.warn('Map element has no height, setting minimum height');
+        mapElement.style.minHeight = '400px';
     }
 
     // Create map centered on Turkey
@@ -125,11 +136,18 @@ function initMap() {
         touchZoom: true
     });
 
-    // Add OpenStreetMap tiles
+    // Add OpenStreetMap tiles - ALWAYS render base map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
+
+    // Force map to invalidate size after a brief delay to ensure proper rendering
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+        }
+    }, 100);
 
     // Create layer group for markers
     markersLayer = L.layerGroup().addTo(map);
@@ -152,22 +170,26 @@ function initMap() {
         });
     }
 
-    // Initial load
-    const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
-    loadEarthquakes(initialMinMag);
+    // Initial load - only if endpoint is configured
+    if (EQ_API_URL) {
+        const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
+        loadEarthquakes(initialMinMag);
 
-    // Auto-refresh every 90 seconds
-    updateInterval = setInterval(() => {
-        const minMag = parseFloat(minMagSelect?.value || 3.0);
-        loadEarthquakes(minMag);
-    }, 90000);
+        // Auto-refresh every 90 seconds
+        updateInterval = setInterval(() => {
+            const minMag = parseFloat(minMagSelect?.value || 3.0);
+            loadEarthquakes(minMag);
+        }, 90000);
+    } else {
+        console.log('EQ_API_URL not configured. Map will display without earthquake markers.');
+    }
 }
 
 // Fetch earthquakes from API
 async function fetchEarthquakes(minMag = 3.0) {
-    if (EQ_API_URL === "PUT_YOUR_EQ_ENDPOINT_HERE") {
-        console.warn('EQ_API_URL not configured. Using mock data for demonstration.');
-        return getMockEarthquakeData(minMag);
+    if (!EQ_API_URL || EQ_API_URL === "") {
+        // No endpoint configured - return empty array (map will show without markers)
+        return [];
     }
 
     // Abort previous request if still pending
@@ -249,7 +271,15 @@ function getMockEarthquakeData(minMag) {
 
 // Load and display earthquakes on map
 async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
-    if (!map || !markersLayer) return;
+    if (!map || !markersLayer) {
+        console.warn('Map or markersLayer not initialized');
+        return;
+    }
+
+    // If no endpoint configured, skip marker loading but keep map visible
+    if (!EQ_API_URL || EQ_API_URL === "") {
+        return;
+    }
 
     // Check cache
     const cacheKey = `${minMag}-${Date.now() - (Date.now() % 90000)}`; // 90s cache window
@@ -259,7 +289,8 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
 
     const earthquakes = await fetchEarthquakes(minMag);
     if (!earthquakes || earthquakes.length === 0) {
-        console.log('No earthquakes found');
+        // Clear existing markers if no data
+        markersLayer.clearLayers();
         return;
     }
 
@@ -330,18 +361,24 @@ function getMagnitudeColor(mag) {
 
 // Initialize map when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Wait a bit for Leaflet to load if needed
+    // Check if Leaflet is already loaded
     if (typeof L !== 'undefined') {
         initMap();
     } else {
-        // Retry after a short delay
-        setTimeout(() => {
+        // Wait for Leaflet to load (it's loaded before this script)
+        // Retry with increasing delays
+        let attempts = 0;
+        const maxAttempts = 10;
+        const checkLeaflet = setInterval(() => {
+            attempts++;
             if (typeof L !== 'undefined') {
+                clearInterval(checkLeaflet);
                 initMap();
-            } else {
-                console.error('Leaflet library not loaded');
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkLeaflet);
+                console.error('Leaflet library failed to load after', maxAttempts, 'attempts');
             }
-        }, 500);
+        }, 100);
     }
 });
 
