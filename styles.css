@@ -33,6 +33,24 @@ body {
     overflow-x: hidden;
 }
 
+/* Ensure all main content sections are visible by default */
+section {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+.feature-card,
+.hero-content,
+.about-content,
+.map-content,
+.faq-container,
+.contact-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -47,6 +65,7 @@ body {
     top: 0;
     z-index: 1000;
     padding: 1rem 0;
+    max-height: 80px;
 }
 
 .nav-content {
