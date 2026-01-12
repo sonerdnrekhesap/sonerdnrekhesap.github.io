@@ -98,6 +98,31 @@ document.addEventListener('submit', (e) => {
     // Handle form submission here if needed
 });
 
+// FAQ Accordion
+document.addEventListener('DOMContentLoaded', () => {
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', () => {
+            const isExpanded = question.getAttribute('aria-expanded') === 'true';
+            const answer = document.getElementById(question.getAttribute('aria-controls'));
+            
+            // Close all other FAQ items
+            faqQuestions.forEach(q => {
+                if (q !== question) {
+                    q.setAttribute('aria-expanded', 'false');
+                }
+            });
+            
+            // Toggle current item
+            question.setAttribute('aria-expanded', !isExpanded);
+            
+            // Let CSS handle the animation via aria-expanded attribute
+            // The max-height is controlled by CSS based on aria-expanded
+        });
+    });
+});
+
 // Console message
 console.log('%c⚠️ ErkenUyar', 'font-size: 20px; font-weight: bold; color: #2196F3;');
 console.log('%cDeprem ve Afet Erken Uyarı Sistemi', 'font-size: 12px; color: #666;');

@@ -13,11 +13,14 @@
         <div class="container">
             <div class="nav-content">
                 <div class="logo">
-                    <span class="logo-icon">⚠️</span>
+                    <img src="logo.jpeg" alt="ErkenUyar Logo" class="logo-img">
                     <span class="logo-text">ErkenUyar</span>
                 </div>
                 <ul class="nav-menu" id="navMenu">
                     <li><a href="index.html" class="nav-link active">Ana Sayfa</a></li>
+                    <li><a href="#harita" class="nav-link">Harita</a></li>
+                    <li><a href="#sss" class="nav-link">SSS</a></li>
+                    <li><a href="#iletisim" class="nav-link">İletişim</a></li>
                     <li><a href="privacy.html" class="nav-link">Gizlilik Politikası</a></li>
                     <li><a href="terms.html" class="nav-link">Kullanım Koşulları</a></li>
                 </ul>
@@ -31,9 +34,12 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero">
+    <section class="hero" id="hero">
         <div class="container">
             <div class="hero-content">
+                <div class="hero-logo">
+                    <img src="logo.jpeg" alt="ErkenUyar Logo" class="hero-logo-img">
+                </div>
                 <h1 class="hero-title">ErkenUyar</h1>
                 <p class="hero-subtitle">Türkiye Deprem ve Afet Erken Uyarı Sistemi</p>
                 <p class="hero-description">
@@ -63,10 +69,12 @@
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">⚠️</div>
+                    <div class="feature-icon">
+                        <img src="logo.jpeg" alt="ErkenUyar Logo" class="feature-logo">
+                    </div>
                     <h3 class="feature-title">Erken Uyarı Sistemi</h3>
                     <p class="feature-description">
-                        30 saniyelik P-dalgası erken uyarı çemberi ile deprem öncesi hazırlık.
+                        Koşullara bağlı olarak deprem dalgaları ulaşmadan önce saniyeler mertebesinde erken uyarı penceresi hedeflenir.
                     </p>
                 </div>
                 <div class="feature-card">
@@ -97,6 +105,109 @@
                         Önemli deprem ve afet uyarıları için anlık bildirimler.
                     </p>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Section -->
+    <section class="map-section" id="harita">
+        <div class="container">
+            <h2 class="section-title">Canlı Harita</h2>
+            <div class="map-content">
+                <p class="map-description">
+                    Uygulamamızda deprem ve afet katmanları, risk alanları ve güncel verileri görüntüleyebilirsiniz. 
+                    Harita bilgilendirme amaçlıdır ve resmî kurum verilerinin yerine geçmez.
+                </p>
+                <div class="map-container">
+                    <div class="map-placeholder" id="mapPlaceholder">
+                        <div class="map-overlay">
+                            <p class="map-placeholder-text">Harita yakında burada</p>
+                            <a href="#hero" class="btn btn-secondary map-cta-btn" onclick="document.getElementById('hero').scrollIntoView({behavior: 'smooth'}); return false;">Uygulamada görüntüle</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" id="sss">
+        <div class="container">
+            <h2 class="section-title">SSS (Sık Sorulan Sorular)</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
+                        <span>ErkenUyar resmî bir kurum uygulaması mı?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-1">
+                        <p>Hayır, ErkenUyar bağımsız bir uygulamadır ve resmî bir kurum uygulaması değildir. Uygulama, resmî kanalların (AFAD, Kandilli Rasathanesi) yerine geçmez. Acil durumlarda mutlaka 112 Acil Çağrı Merkezi'ni arayın ve resmî kurumların açıklamalarını takip edin.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
+                        <span>Bildirimler neden bazen gecikebilir veya gelmeyebilir?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-2">
+                        <p>Bildirimlerin gecikmesi veya gelmemesi birkaç nedenden kaynaklanabilir: ağ gecikmesi, cihaz izinleri, arka plan kısıtları, veri kaynağı gecikmesi veya kullanıcı ayarları. Uyarılar olasılıksal niteliktedir ve her koşulda çalışacağına dair garanti verilemez. Uygulama ayarlarınızı kontrol ederek bildirim izinlerini aktif tutmanız önerilir.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+                        <span>Konum izni zorunlu mu?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-3">
+                        <p>Konum izni zorunlu değildir ancak uyarıların bölgenize göre özelleşmesi için önerilir. Kullanıcı isterse konum iznini cihaz ayarlarından kapatabilir. Minimum veri prensibi gereği, yalnızca gerekli veriler toplanır.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
+                        <span>Pil tüketimi yapar mı?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-4">
+                        <p>Uygulama hafif ve optimize edilmiştir. Arka planda gereksiz çalışma yapmaz ve pil tüketimi minimum seviyededir. Bildirim tercihlerinizi ayarlayarak pil kullanımını daha da kontrol edebilirsiniz.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
+                        <span>Hangi kaynaklardan veri alıyorsunuz?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-5">
+                        <p>Uygulamada ve kullanım koşullarında belirtilen kamuya açık veri kaynakları kullanılmaktadır. Kaynaklar değişebilir ve doğruluk için çapraz kontrol yapılması önerilir. Resmî ve nihai bilgiler için AFAD ve Kandilli Rasathanesi gibi yetkili kurumların doğrudan yayımladığı açıklamalar esas alınmalıdır.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
+                        <span>Arkadaş takibi nasıl çalışır, gizlilik var mı?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-6">
+                        <p>Arkadaş takibi özelliği kullanıcı onayı ile çalışır. Tüm paylaşımlar kullanıcı kontrolündedir ve istenirse kapatılabilir. Acil durumlarda hızlı durum paylaşımı için tasarlanmıştır. Gizlilik politikamızda detaylı bilgi bulabilirsiniz.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
+                        <span>Hata bildirmek veya öneri iletmek istiyorum, nasıl ulaşırım?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-7">
+                        <p>Hata bildirimi ve önerileriniz için <a href="mailto:erkenuyardestek@gmail.com">erkenuyardestek@gmail.com</a> adresine e-posta gönderebilirsiniz. Geri bildirimleriniz bizim için değerlidir.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="iletisim">
+        <div class="container">
+            <h2 class="section-title">İletişim</h2>
+            <div class="contact-content">
+                <p>Öneri ve istekleriniz için: <a href="mailto:erkenuyardestek@gmail.com">erkenuyardestek@gmail.com</a></p>
             </div>
         </div>
     </section>
