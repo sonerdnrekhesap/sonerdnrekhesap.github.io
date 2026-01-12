@@ -95,8 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // EARTHQUAKE MAP FUNCTIONALITY
 // ============================================================
 
-// Configuration: Update this with your actual earthquake API endpoint
-const EQ_API_URL = window.EQ_API_URL || "";
+// Configuration: Earthquake API endpoint
+const EQ_API_BASE_URL = window.EQ_API_BASE_URL || "https://erkenuyar-worker.sonerdnrekhesap.workers.dev/api/earthquakes/tr/recent";
 
 // Map state
 let map = null;
@@ -170,28 +170,19 @@ function initMap() {
         });
     }
 
-    // Initial load - only if endpoint is configured
-    if (EQ_API_URL) {
-        const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
-        loadEarthquakes(initialMinMag);
+    // Initial load
+    const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
+    loadEarthquakes(initialMinMag);
 
-        // Auto-refresh every 90 seconds
-        updateInterval = setInterval(() => {
-            const minMag = parseFloat(minMagSelect?.value || 3.0);
-            loadEarthquakes(minMag);
-        }, 90000);
-    } else {
-        console.log('EQ_API_URL not configured. Map will display without earthquake markers.');
-    }
+    // Auto-refresh every 90 seconds
+    updateInterval = setInterval(() => {
+        const minMag = parseFloat(minMagSelect?.value || 3.0);
+        loadEarthquakes(minMag);
+    }, 90000);
 }
 
 // Fetch earthquakes from API
 async function fetchEarthquakes(minMag = 3.0) {
-    if (!EQ_API_URL || EQ_API_URL === "") {
-        // No endpoint configured - return empty array (map will show without markers)
-        return [];
-    }
-
     // Abort previous request if still pending
     if (currentAbortController) {
         currentAbortController.abort();
@@ -199,7 +190,7 @@ async function fetchEarthquakes(minMag = 3.0) {
     currentAbortController = new AbortController();
 
     try {
-        const url = `${EQ_API_URL}?minMag=${minMag}&limit=100`;
+        const url = `${EQ_API_BASE_URL}?range=last_7_days&min_mw=${minMag}`;
         const response = await fetch(url, {
             signal: currentAbortController.signal,
             headers: {
@@ -218,66 +209,38 @@ async function fetchEarthquakes(minMag = 3.0) {
             return null; // Request was aborted, ignore
         }
         console.error('Error fetching earthquakes:', error);
-        // Fallback to mock data on error
-        return getMockEarthquakeData(minMag);
+        return []; // Return empty array on error (map will show without markers)
     }
 }
 
 // Normalize earthquake data from API response
 function normalizeEarthquakeData(data) {
-    // Handle different API response formats
-    const earthquakes = Array.isArray(data) ? data : (data.earthquakes || data.data || data.features || []);
+    // API returns: {ok: true, count: 649, items: [...]}
+    if (!data || !data.ok || !data.items) {
+        console.warn('Invalid API response format');
+        return [];
+    }
+
+    const earthquakes = data.items || [];
     
     return earthquakes.map((eq, index) => {
-        // Handle GeoJSON format
-        if (eq.geometry && eq.geometry.coordinates) {
-            return {
-                id: eq.id || eq.properties?.id || `eq-${index}`,
-                lat: eq.geometry.coordinates[1],
-                lon: eq.geometry.coordinates[0],
-                mag: eq.properties?.mag || eq.magnitude || eq.mag || 0,
-                depth: eq.properties?.depth || eq.depth || 0,
-                place: eq.properties?.place || eq.place || 'Bilinmeyen konum',
-                timeISO: eq.properties?.time || eq.time || eq.timestamp || new Date().toISOString()
-            };
-        }
-        
-        // Handle flat object format
         return {
-            id: eq.id || `eq-${index}`,
-            lat: eq.lat || eq.latitude || eq.lat,
-            lon: eq.lon || eq.longitude || eq.lng,
-            mag: eq.mag || eq.magnitude || eq.m || 0,
-            depth: eq.depth || eq.d || 0,
-            place: eq.place || eq.location || eq.name || 'Bilinmeyen konum',
-            timeISO: eq.time || eq.timestamp || eq.date || new Date().toISOString()
+            id: eq.id || `eq-${index}-${eq.time_utc || Date.now()}`,
+            lat: eq.lat,
+            lon: eq.lon,
+            mag: eq.mag || eq.mw || eq.ml || 0,
+            depth: eq.depth_km || eq.depth || 0,
+            place: eq.place || 'Bilinmeyen konum',
+            timeISO: eq.time_tr || eq.time_utc || new Date().toISOString()
         };
-    }).filter(eq => eq.lat && eq.lon && !isNaN(eq.lat) && !isNaN(eq.lon));
+    }).filter(eq => eq.lat && eq.lon && !isNaN(eq.lat) && !isNaN(eq.lon) && eq.mag >= 0);
 }
 
-// Get mock earthquake data for demonstration
-function getMockEarthquakeData(minMag) {
-    // Sample earthquakes in Turkey region
-    const mockData = [
-        { id: '1', lat: 40.8, lon: 30.0, mag: 4.2, depth: 10, place: 'Marmara Denizi', timeISO: new Date().toISOString() },
-        { id: '2', lat: 38.4, lon: 27.1, mag: 3.5, depth: 8, place: 'İzmir', timeISO: new Date(Date.now() - 3600000).toISOString() },
-        { id: '3', lat: 36.9, lon: 35.3, mag: 5.1, depth: 15, place: 'Adana', timeISO: new Date(Date.now() - 7200000).toISOString() },
-        { id: '4', lat: 39.9, lon: 32.9, mag: 3.8, depth: 12, place: 'Ankara', timeISO: new Date(Date.now() - 1800000).toISOString() },
-        { id: '5', lat: 41.0, lon: 28.9, mag: 4.5, depth: 9, place: 'İstanbul', timeISO: new Date(Date.now() - 5400000).toISOString() }
-    ];
-    
-    return mockData.filter(eq => eq.mag >= minMag);
-}
 
 // Load and display earthquakes on map
 async function loadEarthquakes(minMag = 3.0, forceRefresh = false) {
     if (!map || !markersLayer) {
         console.warn('Map or markersLayer not initialized');
-        return;
-    }
-
-    // If no endpoint configured, skip marker loading but keep map visible
-    if (!EQ_API_URL || EQ_API_URL === "") {
         return;
     }
 
