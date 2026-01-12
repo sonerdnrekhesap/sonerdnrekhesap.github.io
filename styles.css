@@ -155,20 +155,35 @@ section {
     margin: 0 auto;
 }
 
-.hero-logo {
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: center;
+/* Hero App Icon - Premium Adaptive Design */
+.hero-appicon {
+    width: clamp(96px, 10vw, 140px);
+    height: clamp(96px, 10vw, 140px);
+    margin: 0 auto 2rem;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.45), rgba(255,255,255,.08) 45%, rgba(0,0,0,.06));
+    box-shadow:
+        0 18px 40px rgba(0,0,0,.18),
+        0 2px 8px rgba(0,0,0,.10);
 }
 
-.hero-logo-img {
-    width: 120px;
-    height: 120px;
-    object-fit: contain;
-    border-radius: 24px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    background: rgba(255, 255, 255, 0.1);
-    padding: 10px;
+.hero-appicon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.08);
+    pointer-events: none;
+}
+
+.hero-appicon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scale(1.03);
 }
 
 .hero-title {
@@ -188,6 +203,7 @@ section {
 .hero-description {
     font-size: 1.1rem;
     margin-bottom: 2.5rem;
+    margin-top: 1rem;
     opacity: 0.9;
     line-height: 1.8;
 }
@@ -203,7 +219,7 @@ section {
 .btn {
     display: inline-block;
     padding: 0.875rem 2rem;
-    border-radius: 8px;
+    border-radius: 12px;
     text-decoration: none;
     font-weight: 600;
     transition: var(--transition);
@@ -220,8 +236,8 @@ section {
 
 .btn-primary:hover {
     background: #FF5722;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(255, 106, 60, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 106, 60, 0.35);
 }
 
 .btn-secondary {
@@ -233,7 +249,7 @@ section {
 .btn-secondary:hover {
     background: white;
     color: var(--primary-color);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 /* Features Section */
@@ -248,6 +264,7 @@ section {
     text-align: center;
     margin-bottom: 3rem;
     color: var(--text-primary);
+    letter-spacing: 0.5px;
 }
 
 .features-grid {
@@ -266,8 +283,8 @@ section {
 }
 
 .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .feature-icon {
@@ -277,7 +294,7 @@ section {
 
 .feature-title {
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 1rem;
     color: var(--text-primary);
 }
@@ -512,9 +529,9 @@ section {
         font-size: 2rem;
     }
 
-    .hero-logo-img {
-        width: 80px;
-        height: 80px;
+    .hero-appicon {
+        width: clamp(80px, 12vw, 120px);
+        height: clamp(80px, 12vw, 120px);
     }
 
     .logo-img {
@@ -582,6 +599,14 @@ section {
     margin-top: 0;
 }
 
+/* Section Dividers */
+.section-divider {
+    height: 1px;
+    margin: 48px auto;
+    max-width: 900px;
+    background: linear-gradient(to right, transparent, rgba(0,0,0,.12), transparent);
+}
+
 /* Map Section */
 .map-section {
     padding: 5rem 0;
@@ -601,56 +626,74 @@ section {
     font-size: 1.1rem;
 }
 
-.map-container {
+.map-shell {
     position: relative;
+}
+
+.map-canvas {
     width: 100%;
-    margin: 0 auto;
-    border-radius: 16px;
+    height: min(70vh, 520px);
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    background: var(--bg-light);
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,.35),
+        0 16px 36px rgba(0,0,0,.10);
+    background: #cfe8ff;
 }
 
-.map-placeholder {
-    position: relative;
-    width: 100%;
-    padding-bottom: 56.25%; /* 16:9 aspect ratio */
-    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
-}
-
-.map-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+.map-toolbar {
     display: flex;
-    flex-direction: column;
+    gap: 12px;
     align-items: center;
     justify-content: center;
-    gap: 1.5rem;
-    padding: 2rem;
+    margin-top: 12px;
+    flex-wrap: wrap;
 }
 
-.map-placeholder-text {
-    font-size: 1.5rem;
-    font-weight: 600;
+.map-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
     color: var(--text-primary);
-    text-align: center;
 }
 
-.map-cta-btn {
-    margin-top: 0.5rem;
-}
-
-.map-container iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+.map-toolbar select {
+    border-radius: 12px;
+    padding: 0.875rem 1.5rem;
     border: none;
-    border-radius: 16px;
+    background: var(--bg-white);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.map-toolbar select:hover {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+}
+
+.map-toolbar select:focus {
+    outline: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12), 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.map-toolbar button {
+    border-radius: 12px;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.map-note {
+    text-align: center;
+    opacity: 0.8;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
 }
 
 /* FAQ Section */
@@ -695,6 +738,7 @@ section {
 
 .faq-question:hover {
     color: var(--primary-color);
+    background: rgba(33, 150, 243, 0.05);
 }
 
 .faq-question:focus {
@@ -783,26 +827,49 @@ section {
 
 /* Responsive adjustments for new sections */
 @media (max-width: 768px) {
-    .map-placeholder {
-        padding-bottom: 75%; /* Taller on mobile */
+    .map-canvas {
+        height: min(60vh, 400px);
     }
 
-    .map-placeholder-text {
-        font-size: 1.25rem;
+    .map-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 0 0.5rem;
+    }
+
+    .map-toolbar label {
+        justify-content: space-between;
+        font-size: 0.9rem;
+    }
+
+    .map-toolbar select,
+    .map-toolbar button {
+        width: 100%;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+    }
+
+    .faq-item {
+        margin-bottom: 0.75rem;
     }
 
     .faq-question {
-        font-size: 1rem;
-        padding: 1.25rem;
+        padding: 1rem;
+        font-size: 0.95rem;
     }
 
-    .contact-content p {
-        font-size: 1.1rem;
+    .hero-appicon {
+        width: clamp(90px, 12vw, 130px);
+        height: clamp(90px, 12vw, 130px);
     }
 
-    .feature-logo {
-        width: 50px;
-        height: 50px;
+    .section-divider {
+        margin: 36px auto;
+    }
+
+    .section-divider {
+        margin: 36px auto;
     }
 }
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ErkenUyar - Türkiye Deprem ve Afet Erken Uyarı Sistemi. Deprem, sel, yangın ve diğer afet riskleri hakkında anlık bilgi alın.">
     <title>ErkenUyar - Deprem ve Afet Erken Uyarı Sistemi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -37,8 +38,8 @@
     <section class="hero" id="hero">
         <div class="container">
             <div class="hero-content">
-                <div class="hero-logo">
-                    <img src="./logo.jpeg" alt="ErkenUyar Logo" class="hero-logo-img">
+                <div class="hero-appicon" aria-label="ErkenUyar uygulama ikonu">
+                    <img src="./logo.jpeg" alt="ErkenUyar uygulama ikonu" loading="lazy" />
                 </div>
                 <h1 class="hero-title">ErkenUyar</h1>
                 <p class="hero-subtitle">Türkiye Deprem ve Afet Erken Uyarı Sistemi</p>
@@ -109,6 +110,8 @@
         </div>
     </section>
 
+    <div class="section-divider"></div>
+
     <!-- Map Section -->
     <section class="map-section" id="harita">
         <div class="container">
@@ -118,17 +121,29 @@
                     Uygulamamızda deprem ve afet katmanları, risk alanları ve güncel verileri görüntüleyebilirsiniz. 
                     Harita bilgilendirme amaçlıdır ve resmî kurum verilerinin yerine geçmez.
                 </p>
-                <div class="map-container">
-                    <div class="map-placeholder" id="mapPlaceholder">
-                        <div class="map-overlay">
-                            <p class="map-placeholder-text">Harita yakında burada</p>
-                            <a href="#hero" class="btn btn-secondary map-cta-btn" onclick="document.getElementById('hero').scrollIntoView({behavior: 'smooth'}); return false;">Uygulamada görüntüle</a>
-                        </div>
+                <div class="map-shell">
+                    <div id="map" class="map-canvas" aria-label="ErkenUyar Canlı Harita"></div>
+                    <div class="map-toolbar">
+                        <label>
+                            Min. Büyüklük
+                            <select id="minMag">
+                                <option value="2.5">2.5+</option>
+                                <option value="3.0" selected>3.0+</option>
+                                <option value="4.0">4.0+</option>
+                                <option value="5.0">5.0+</option>
+                            </select>
+                        </label>
+                        <button id="refreshMap" type="button" class="btn btn-secondary">Yenile</button>
                     </div>
+                    <p class="map-note">
+                        Harita bilgilendirme amaçlıdır ve resmî kurum uyarılarının yerine geçmez.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
+
+    <div class="section-divider"></div>
 
     <!-- FAQ Section -->
     <section class="faq-section" id="sss">
@@ -202,6 +217,8 @@
         </div>
     </section>
 
+    <div class="section-divider"></div>
+
     <!-- Contact Section -->
     <section class="contact-section" id="iletisim">
         <div class="container">
@@ -265,6 +282,7 @@
         </div>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="./script.js" defer></script>
 </body>
 </html>
