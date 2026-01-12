@@ -92,20 +92,45 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// EARTHQUAKE MAP FUNCTIONALITY
+// EARTHQUAKE & WILDFIRE MAP FUNCTIONALITY
 // ============================================================
 
-// Configuration: Earthquake API endpoint
-const EQ_API_BASE_URL = window.EQ_API_BASE_URL || "https://erkenuyar-worker.sonerdnrekhesap.workers.dev/api/earthquakes/tr/recent";
+// Configuration
+const EQ_API_URL = window.EQ_API_URL || "https://erkenuyar-worker.sonerdnrekhesap.workers.dev/api/earthquakes/tr/recent";
+const NASA_FIRMS_API_KEY = "57fd874b0ee5f04c0d647b3fcc13d701";
+const NASA_FIRMS_SOURCE = "VIIRS_SNPP_NRT";
+const TURKEY_BBOX = "26.0,36.0,45.0,42.5"; // minLon,minLat,maxLon,maxLat
+const FIRMS_DAYS = 8;
 
 // Map state
 let map = null;
-let markersLayer = null;
+let earthquakeClusterGroup = null;
+let fireLayer = null;
 let currentAbortController = null;
-let lastDataCache = null;
+let lastEqDataCache = null;
+let lastFireDataCache = null;
 let updateInterval = null;
+let fireUpdateInterval = null;
+let viewportDebounceTimer = null;
+let fireDebounceTimer = null;
 
-// Initialize map on DOM ready
+// Industrial heat blacklist zones (lat, lon, radius in degrees)
+const INDUSTRIAL_ZONES = [
+    { lat: 40.85, lon: 29.30, radius: 0.05, name: "İstanbul Tuzla Endüstri" },
+    { lat: 40.95, lon: 28.70, radius: 0.03, name: "Ambarlı Termik" },
+    { lat: 38.80, lon: 26.95, radius: 0.04, name: "İzmir Aliağa Endüstri" },
+    { lat: 40.77, lon: 29.93, radius: 0.04, name: "Kocaeli İzmit Endüstri" },
+    { lat: 40.75, lon: 29.95, radius: 0.02, name: "Tüpraş Rafineri" },
+    { lat: 38.20, lon: 36.90, radius: 0.03, name: "Afşin-Elbistan Termik" },
+    { lat: 39.20, lon: 27.60, radius: 0.03, name: "Soma Termik" },
+    { lat: 37.05, lon: 28.35, radius: 0.03, name: "Yatağan Termik" },
+    { lat: 36.85, lon: 28.20, radius: 0.03, name: "Kemerköy Termik" },
+    { lat: 36.60, lon: 36.20, radius: 0.03, name: "İskenderun Demir-Çelik" },
+    { lat: 41.20, lon: 32.65, radius: 0.03, name: "Karabük Demir-Çelik" },
+    { lat: 41.30, lon: 31.40, radius: 0.03, name: "Ereğli Demir-Çelik" }
+];
+
+// Initialize map
 function initMap() {
     const mapElement = document.getElementById('map');
     if (!mapElement) {
@@ -118,49 +143,120 @@ function initMap() {
         return;
     }
 
-    // Ensure map element has dimensions
     if (mapElement.offsetHeight === 0) {
-        console.warn('Map element has no height, setting minimum height');
         mapElement.style.minHeight = '400px';
     }
 
-    // Create map centered on Turkey
-    map = L.map('map', {
-        center: [39.0, 35.0],
-        zoom: 6,
-        zoomControl: true,
-        scrollWheelZoom: true,
-        doubleClickZoom: true,
-        boxZoom: true,
-        keyboard: true,
-        touchZoom: true
+    // Ensure map element has proper dimensions
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+        console.error('Map container element not found!');
+        return;
+    }
+    
+    console.log('Map container dimensions:', {
+        width: mapContainer.offsetWidth,
+        height: mapContainer.offsetHeight,
+        computed: window.getComputedStyle(mapContainer).height
     });
+    
+    if (mapContainer.offsetHeight === 0 || mapContainer.offsetWidth === 0) {
+        console.warn('Map container has no dimensions, setting defaults');
+        mapContainer.style.height = '400px';
+        mapContainer.style.width = '100%';
+        // Force a reflow
+        mapContainer.offsetHeight;
+    }
 
-    // Add OpenStreetMap tiles - ALWAYS render base map
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+    // Create map with constraints
+    try {
+        map = L.map('map', {
+            center: [39.0, 35.0],
+            zoom: 6,
+            minZoom: 5.5,
+            maxZoom: 12.0,
+            zoomControl: true,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            boxZoom: true,
+            keyboard: true,
+            touchZoom: true
+        });
 
-    // Force map to invalidate size after a brief delay to ensure proper rendering
-    setTimeout(() => {
-        if (map) {
-            map.invalidateSize();
-        }
-    }, 100);
+        console.log('Map created successfully:', map);
 
-    // Create layer group for markers
-    markersLayer = L.layerGroup().addTo(map);
+        // Add OpenStreetMap tiles
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        osmLayer.addTo(map);
+        console.log('OSM tiles added to map');
+        
+        // Verify tiles are loading
+        osmLayer.on('tileload', () => {
+            console.log('Tile loaded successfully');
+        });
+        
+        osmLayer.on('tileerror', (error) => {
+            console.error('Tile load error:', error);
+        });
+    } catch (error) {
+        console.error('Error creating map:', error);
+        throw error;
+    }
+
+    // Create cluster groups
+    if (typeof L.markerClusterGroup !== 'undefined') {
+        earthquakeClusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 45,
+            disableClusteringAtZoom: 11,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                return L.divIcon({
+                    html: `<div style="background-color: #d32f2f; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${count}</div>`,
+                    className: 'marker-cluster',
+                    iconSize: [40, 40]
+                });
+            }
+        });
+        map.addLayer(earthquakeClusterGroup);
+        console.log('Earthquake cluster group created');
+    } else {
+        console.warn('MarkerCluster not available, using regular layer group');
+        earthquakeClusterGroup = L.layerGroup();
+        map.addLayer(earthquakeClusterGroup);
+    }
+
+    fireLayer = L.layerGroup();
+    map.addLayer(fireLayer);
+    console.log('Fire layer created');
 
     // Setup controls
     const minMagSelect = document.getElementById('minMag');
     const timeRangeSelect = document.getElementById('timeRange');
+    const showFiresCheckbox = document.getElementById('showFires');
     const refreshBtn = document.getElementById('refreshMap');
+
+    // Load saved preferences
+    const savedMinMag = localStorage.getItem('erkenuyar_minMag');
+    if (savedMinMag && minMagSelect) {
+        minMagSelect.value = savedMinMag;
+    }
 
     const reloadMap = () => {
         const minMag = parseFloat(minMagSelect?.value || 3.0);
-        const timeRange = timeRangeSelect?.value || 'last_7_days';
+        const timeRange = timeRangeSelect?.value || '1_day';
+        
+        // Save to localStorage
+        if (minMagSelect) {
+            localStorage.setItem('erkenuyar_minMag', minMagSelect.value);
+        }
+        
         loadEarthquakes(minMag, false, timeRange);
+        if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+            loadFires();
+        }
     };
 
     if (minMagSelect) {
@@ -171,42 +267,108 @@ function initMap() {
         timeRangeSelect.addEventListener('change', reloadMap);
     }
 
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            const minMag = parseFloat(minMagSelect?.value || 3.0);
-            const timeRange = timeRangeSelect?.value || 'last_7_days';
-            loadEarthquakes(minMag, true, timeRange);
+    if (showFiresCheckbox) {
+        showFiresCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked && map.getZoom() >= 5.0) {
+                loadFires();
+            } else {
+                fireLayer.clearLayers();
+            }
         });
     }
 
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            const minMag = parseFloat(minMagSelect?.value || 3.0);
+            const timeRange = timeRangeSelect?.value || '1_day';
+            loadEarthquakes(minMag, true, timeRange);
+            if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+                loadFires(true);
+            }
+        });
+    }
+
+    // Viewport change handler for fires (debounced)
+    map.on('moveend', () => {
+        if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+            clearTimeout(fireDebounceTimer);
+            fireDebounceTimer = setTimeout(() => {
+                loadFires();
+            }, 500);
+        }
+    });
+
     // Initial load
     const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
-    const initialTimeRange = timeRangeSelect?.value || 'last_7_days';
+    const initialTimeRange = timeRangeSelect?.value || '1_day';
     loadEarthquakes(initialMinMag, false, initialTimeRange);
+    
+    if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+        loadFires();
+    }
 
-    // Auto-refresh every 90 seconds
+    // Auto-refresh earthquakes every 90 seconds
     updateInterval = setInterval(() => {
         const minMag = parseFloat(minMagSelect?.value || 3.0);
-        const timeRange = timeRangeSelect?.value || 'last_7_days';
+        const timeRange = timeRangeSelect?.value || '1_day';
         loadEarthquakes(minMag, false, timeRange);
     }, 90000);
+
+    // Auto-refresh fires every 2 minutes
+    fireUpdateInterval = setInterval(() => {
+        if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+            loadFires();
+        }
+    }, 120000);
+
+    // Try to get user location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            map.setView([position.coords.latitude, position.coords.longitude], 8.0);
+        });
+    }
+
+    // Force map to render properly
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+            console.log('Map size invalidated');
+            
+            // Try again after a bit more delay
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                    console.log('Map size invalidated again');
+                }
+            }, 300);
+        }
+    }, 200);
+    
+    console.log('Map initialization complete');
 }
 
 // Fetch earthquakes from API
-async function fetchEarthquakes(minMag = 3.0, timeRange = 'last_7_days') {
-    // Abort previous request if still pending
+async function fetchEarthquakes(minMag = 3.0, timeRange = '1_day') {
     if (currentAbortController) {
         currentAbortController.abort();
     }
     currentAbortController = new AbortController();
 
     try {
-        const url = `${EQ_API_BASE_URL}?range=${timeRange}&min_mw=${minMag}`;
+        // Convert timeRange to API format
+        const timeRangeMap = {
+            '8_hours': 'last_8_hours',
+            '1_day': 'last_1_day',
+            '7_days': 'last_7_days'
+        };
+        const apiTimeRange = timeRangeMap[timeRange] || 'last_1_day';
+
+        const url = `${EQ_API_URL}?range=${apiTimeRange}&min_mw=${minMag}`;
+        console.log('Fetching earthquakes from:', url);
+        
         const response = await fetch(url, {
             signal: currentAbortController.signal,
-            headers: {
-                'Accept': 'application/json'
-            }
+            headers: { 'Accept': 'application/json' }
         });
 
         if (!response.ok) {
@@ -214,106 +376,142 @@ async function fetchEarthquakes(minMag = 3.0, timeRange = 'last_7_days') {
         }
 
         const data = await response.json();
+        console.log('Earthquake API response:', data);
         return normalizeEarthquakeData(data);
     } catch (error) {
         if (error.name === 'AbortError') {
-            return null; // Request was aborted, ignore
+            return null;
         }
         console.error('Error fetching earthquakes:', error);
-        return []; // Return empty array on error (map will show without markers)
-    }
-}
-
-// Normalize earthquake data from API response
-function normalizeEarthquakeData(data) {
-    // API returns: {ok: true, count: 649, items: [...]}
-    if (!data || !data.ok || !data.items) {
-        console.warn('Invalid API response format');
         return [];
     }
-
-    const earthquakes = data.items || [];
-    
-    return earthquakes.map((eq, index) => {
-        return {
-            id: eq.id || `eq-${index}-${eq.time_utc || Date.now()}`,
-            lat: eq.lat,
-            lon: eq.lon,
-            mag: eq.mag || eq.mw || eq.ml || 0,
-            depth: eq.depth_km || eq.depth || 0,
-            place: eq.place || 'Bilinmeyen konum',
-            timeISO: eq.time_tr || eq.time_utc || new Date().toISOString()
-        };
-    }).filter(eq => eq.lat && eq.lon && !isNaN(eq.lat) && !isNaN(eq.lon) && eq.mag >= 0);
 }
 
+// Normalize earthquake data
+function normalizeEarthquakeData(data) {
+    console.log('Normalizing earthquake data:', data);
+    
+    // Handle different response formats
+    let earthquakes = [];
+    if (Array.isArray(data)) {
+        earthquakes = data;
+    } else if (data && data.items && Array.isArray(data.items)) {
+        earthquakes = data.items;
+    } else if (data && data.data && Array.isArray(data.data)) {
+        earthquakes = data.data;
+    } else {
+        console.warn('Unexpected data format:', data);
+        return [];
+    }
+    
+    console.log('Found', earthquakes.length, 'earthquakes');
+    
+    // Remove duplicates by ID
+    const seen = new Set();
+    const unique = earthquakes.filter(eq => {
+        const id = eq.id || `${eq.latitude || eq.lat}-${eq.longitude || eq.lon}-${eq.time || eq.time_utc || eq.time_tr}`;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
 
-// Load and display earthquakes on map
-async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = 'last_7_days') {
-    if (!map || !markersLayer) {
-        console.warn('Map or markersLayer not initialized');
+    const normalized = unique.map(eq => ({
+        id: eq.id || `${eq.latitude || eq.lat}-${eq.longitude || eq.lon}-${eq.time || eq.time_utc || eq.time_tr || eq.acq_date}`,
+        lat: parseFloat(eq.latitude || eq.lat),
+        lon: parseFloat(eq.longitude || eq.lon),
+        mag: parseFloat(eq.magnitude || eq.mw || eq.mag || eq.ml || 0),
+        depth: parseFloat(eq.depthKm || eq.depth_km || eq.depth || 0),
+        place: eq.place || 'Bilinmeyen konum',
+        time: eq.time || eq.time_utc || eq.time_tr || new Date().toISOString(),
+        source: eq.source || 'Bilinmeyen kaynak'
+    })).filter(eq => {
+        const valid = eq.lat && eq.lon && !isNaN(eq.lat) && !isNaN(eq.lon) && !isNaN(eq.mag) && eq.mag >= 0 && eq.lat >= 35 && eq.lat <= 43 && eq.lon >= 25 && eq.lon <= 45;
+        if (!valid) {
+            console.warn('Invalid earthquake data (filtered):', eq);
+        }
+        return valid;
+    }).sort((a, b) => new Date(b.time) - new Date(a.time)); // Sort by time DESC
+
+    console.log('Normalized', normalized.length, 'valid earthquakes');
+    return normalized;
+}
+
+// Load and display earthquakes
+async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = '1_day') {
+    console.log('loadEarthquakes called:', { minMag, timeRange, forceRefresh });
+    
+    if (!map) {
+        console.error('Map not initialized');
+        return;
+    }
+    
+    if (!earthquakeClusterGroup) {
+        console.error('earthquakeClusterGroup not initialized');
         return;
     }
 
-    // Check cache
-    const cacheKey = `${minMag}-${timeRange}-${Date.now() - (Date.now() % 90000)}`; // 90s cache window
-    if (!forceRefresh && lastDataCache && lastDataCache.key === cacheKey) {
-        return; // Use cached data
+    const cacheKey = `eq-${minMag}-${timeRange}`;
+    if (!forceRefresh && lastEqDataCache && lastEqDataCache.key === cacheKey) {
+        const cacheAge = Date.now() - lastEqDataCache.timestamp;
+        if (cacheAge < 300000) { // 5 minutes TTL
+            console.log('Using cached data');
+            return;
+        }
     }
 
+    console.log('Fetching earthquakes...');
     const earthquakes = await fetchEarthquakes(minMag, timeRange);
+    console.log('Fetched earthquakes:', earthquakes);
+    
     if (!earthquakes || earthquakes.length === 0) {
-        // Clear existing markers if no data
-        markersLayer.clearLayers();
+        console.warn('No earthquakes found');
+        earthquakeClusterGroup.clearLayers();
         return;
     }
 
-    // Check if data actually changed
     const dataHash = JSON.stringify(earthquakes.map(eq => eq.id).sort());
-    if (!forceRefresh && lastDataCache && lastDataCache.hash === dataHash) {
-        return; // Data unchanged
+    if (!forceRefresh && lastEqDataCache && lastEqDataCache.hash === dataHash) {
+        console.log('Data unchanged, skipping update');
+        return;
     }
 
-    // Clear existing markers
-    markersLayer.clearLayers();
+    console.log('Clearing existing markers and adding', earthquakes.length, 'new markers');
+    earthquakeClusterGroup.clearLayers();
 
-    // Add new markers
+    let markerCount = 0;
     earthquakes.forEach(eq => {
-        const radius = Math.max(24, Math.min(40, 24 + eq.mag * 3));
         const color = getMagnitudeColor(eq.mag);
         const magText = eq.mag.toFixed(1);
-        
-        // Create custom icon with magnitude text inside
+        const radius = 32;
+
         const iconHtml = `
             <div style="
-                width: ${radius * 2}px;
-                height: ${radius * 2}px;
+                width: ${radius}px;
+                height: ${radius}px;
                 border-radius: 50%;
                 background-color: ${color};
                 border: 3px solid #fff;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 0 8px ${color}40;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: bold;
-                font-size: ${radius > 30 ? '12px' : '10px'};
+                font-size: 11px;
                 color: #fff;
                 text-shadow: 0 1px 2px rgba(0,0,0,0.5);
             ">${magText}</div>
         `;
-        
+
         const customIcon = L.divIcon({
             html: iconHtml,
-            className: 'custom-marker',
-            iconSize: [radius * 2, radius * 2],
-            iconAnchor: [radius, radius]
-        });
-        
-        const marker = L.marker([eq.lat, eq.lon], {
-            icon: customIcon
+            className: 'earthquake-marker',
+            iconSize: [radius, radius],
+            iconAnchor: [radius / 2, radius / 2]
         });
 
-        const timeStr = new Date(eq.timeISO).toLocaleString('tr-TR', {
+        const marker = L.marker([eq.lat, eq.lon], { icon: customIcon });
+
+        const timeStr = new Date(eq.time).toLocaleString('tr-TR', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -326,55 +524,287 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = '
                 <strong style="font-size: 1.1em; color: ${color};">M ${magText}</strong><br>
                 <strong>Derinlik:</strong> ${eq.depth.toFixed(1)} km<br>
                 <strong>Konum:</strong> ${eq.place}<br>
-                <strong>Zaman:</strong> ${timeStr}
+                <strong>Zaman:</strong> ${timeStr}<br>
+                <strong>Kaynak:</strong> ${eq.source}
             </div>
         `);
 
-        marker.addTo(markersLayer);
+        earthquakeClusterGroup.addLayer(marker);
+        markerCount++;
     });
+    
+    console.log('Added', markerCount, 'earthquake markers to map');
 
-    // Update cache
-    lastDataCache = {
+    lastEqDataCache = {
         key: cacheKey,
         hash: dataHash,
+        timestamp: Date.now(),
         data: earthquakes
     };
-
-    // Fit map to show all markers if there are markers
-    if (earthquakes.length > 0) {
-        const bounds = earthquakes.map(eq => [eq.lat, eq.lon]);
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 8 });
-    }
 }
 
 // Get color based on magnitude
 function getMagnitudeColor(mag) {
     if (mag >= 5.0) return '#d32f2f'; // Red
     if (mag >= 4.0) return '#f57c00'; // Orange
-    if (mag >= 3.5) return '#fbc02d'; // Yellow
+    if (mag >= 3.0) return '#fbc02d'; // Yellow/Amber
     return '#1976d2'; // Blue
 }
 
+// Fetch fires from NASA FIRMS
+async function fetchFires() {
+    try {
+        const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${NASA_FIRMS_API_KEY}/${NASA_FIRMS_SOURCE}/${TURKEY_BBOX}/${FIRMS_DAYS}`;
+        const response = await fetch(url, {
+            signal: currentAbortController?.signal,
+            headers: { 'Accept': 'text/csv' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const csvText = await response.text();
+        return parseFiresCSV(csvText);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return null;
+        }
+        console.error('Error fetching fires:', error);
+        return [];
+    }
+}
+
+// Parse FIRMS CSV
+function parseFiresCSV(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',');
+    const fires = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',');
+        if (values.length < headers.length) continue;
+
+        const fire = {};
+        headers.forEach((header, index) => {
+            fire[header.trim()] = values[index]?.trim() || '';
+        });
+
+        if (fire.latitude && fire.longitude) {
+            fires.push({
+                lat: parseFloat(fire.latitude),
+                lon: parseFloat(fire.longitude),
+                confidence: parseInt(fire.confidence) || 0,
+                frp: parseFloat(fire.frp) || 0,
+                acq_date: fire.acq_date || '',
+                acq_time: fire.acq_time || ''
+            });
+        }
+    }
+
+    return fires;
+}
+
+// Classify fire type
+function classifyFireType(fire, allFires) {
+    // Check if in industrial zone
+    for (const zone of INDUSTRIAL_ZONES) {
+        const dist = Math.sqrt(
+            Math.pow(fire.lat - zone.lat, 2) + Math.pow(fire.lon - zone.lon, 2)
+        );
+        if (dist <= zone.radius) {
+            return { type: 'industrialHeat', name: zone.name };
+        }
+    }
+
+    // Check for repeated location (8+ times in same 0.01° radius)
+    const nearby = allFires.filter(f => {
+        const dist = Math.sqrt(
+            Math.pow(f.lat - fire.lat, 2) + Math.pow(f.lon - fire.lon, 2)
+        );
+        return dist <= 0.01;
+    });
+
+    if (nearby.length >= 8) {
+        return { type: 'industrialHeat', name: 'Tekrarlanan Endüstriyel Kaynak' };
+    }
+
+    // Low confidence and low FRP
+    if (fire.confidence < 60 && fire.frp < 10) {
+        return { type: 'industrialHeat', name: 'Düşük Güven Endüstriyel Kaynak' };
+    }
+
+    // High confidence and high FRP = wildfire
+    if (fire.confidence >= 80 && fire.frp >= 30) {
+        return { type: 'wildfire', name: 'Yangın' };
+    }
+
+    // Default to wildfire
+    return { type: 'wildfire', name: 'Yangın' };
+}
+
+// Downsample fires (only wildfires, not industrial)
+function downsampleFires(fires, maxMarkers = 300) {
+    const wildfires = fires.filter(f => f.type === 'wildfire');
+    const industrial = fires.filter(f => f.type === 'industrialHeat');
+
+    if (wildfires.length <= maxMarkers) {
+        return [...wildfires, ...industrial];
+    }
+
+    // Grid-based downsampling
+    const gridSize = 60;
+    const grid = {};
+
+    wildfires.forEach(fire => {
+        const gridX = Math.floor((fire.lon + 180) * gridSize / 360);
+        const gridY = Math.floor((fire.lat + 90) * gridSize / 180);
+        const key = `${gridX}-${gridY}`;
+
+        const score = fire.frp + (fire.confidence * 0.5);
+        if (!grid[key] || grid[key].score < score) {
+            grid[key] = { fire, score };
+        }
+    });
+
+    const downsampled = Object.values(grid).map(item => item.fire);
+    return [...downsampled, ...industrial];
+}
+
+// Load and display fires
+async function loadFires(forceRefresh = false) {
+    if (!map || !fireLayer) return;
+
+    if (map.getZoom() < 5.0) {
+        fireLayer.clearLayers();
+        return;
+    }
+
+    const cacheKey = 'fires';
+    if (!forceRefresh && lastFireDataCache) {
+        const cacheAge = Date.now() - lastFireDataCache.timestamp;
+        if (cacheAge < 120000) { // 2 minutes TTL
+            return;
+        }
+    }
+
+    const fires = await fetchFires();
+    if (!fires || fires.length === 0) {
+        return;
+    }
+
+    // Classify fires
+    const classified = fires.map(fire => ({
+        ...fire,
+        ...classifyFireType(fire, fires)
+    }));
+
+    // Downsample (only wildfires)
+    const downsampled = downsampleFires(classified, 300);
+
+    fireLayer.clearLayers();
+
+    const zoom = map.getZoom();
+    const iconSize = zoom >= 12 ? 24 : zoom >= 9 ? 20 : zoom >= 7 ? 16 : 14;
+
+    downsampled.forEach(fire => {
+        const emoji = fire.type === 'industrialHeat' ? '🏭' : '🔥';
+        const iconHtml = `
+            <div style="
+                font-size: ${iconSize}px;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            ">${emoji}</div>
+        `;
+
+        const customIcon = L.divIcon({
+            html: iconHtml,
+            className: 'fire-marker',
+            iconSize: [iconSize, iconSize],
+            iconAnchor: [iconSize / 2, iconSize / 2]
+        });
+
+        const marker = L.marker([fire.lat, fire.lon], { icon: customIcon });
+
+        const popupContent = fire.type === 'industrialHeat' ? `
+            <div style="min-width: 200px;">
+                <strong>🏭 Endüstriyel Kaynak</strong><br>
+                <strong>Konum:</strong> ${fire.name || 'Endüstriyel Tesis'}<br>
+                <strong>Güven:</strong> ${fire.confidence}%<br>
+                <strong>FRP:</strong> ${fire.frp.toFixed(1)}<br>
+                <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 0.9em;">
+                    ⚠️ Hava kirliliği riski olabilir
+                </div>
+            </div>
+        ` : `
+            <div style="min-width: 200px;">
+                <strong>🔥 Yangın Tespiti</strong><br>
+                <strong>Güven:</strong> ${fire.confidence}%<br>
+                <strong>FRP:</strong> ${fire.frp.toFixed(1)}<br>
+                <strong>Tespit:</strong> ${fire.acq_date} ${fire.acq_time}
+            </div>
+        `;
+
+        marker.bindPopup(popupContent);
+        fireLayer.addLayer(marker);
+    });
+
+    lastFireDataCache = {
+        key: cacheKey,
+        timestamp: Date.now(),
+        data: downsampled
+    };
+}
+
 // Initialize map when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if Leaflet is already loaded
-    if (typeof L !== 'undefined') {
+function initializeMapWhenReady() {
+    console.log('Checking for Leaflet...');
+    
+    if (typeof L === 'undefined') {
+        console.log('Leaflet not loaded yet, retrying...');
+        setTimeout(initializeMapWhenReady, 200);
+        return;
+    }
+    
+    console.log('Leaflet loaded, checking DOM...');
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.log('Map element not found, retrying...');
+        setTimeout(initializeMapWhenReady, 200);
+        return;
+    }
+    
+    console.log('Map element found, initializing...');
+    try {
         initMap();
-    } else {
-        // Wait for Leaflet to load (it's loaded before this script)
-        // Retry with increasing delays
-        let attempts = 0;
-        const maxAttempts = 10;
-        const checkLeaflet = setInterval(() => {
-            attempts++;
-            if (typeof L !== 'undefined') {
-                clearInterval(checkLeaflet);
+    } catch (error) {
+        console.error('Error initializing map:', error);
+        // Retry once more
+        setTimeout(() => {
+            try {
                 initMap();
-            } else if (attempts >= maxAttempts) {
-                clearInterval(checkLeaflet);
-                console.error('Leaflet library failed to load after', maxAttempts, 'attempts');
+            } catch (e) {
+                console.error('Second attempt failed:', e);
             }
-        }, 100);
+        }, 500);
+    }
+}
+
+// Try multiple initialization strategies
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMapWhenReady);
+} else {
+    // DOM already loaded
+    initializeMapWhenReady();
+}
+
+// Also try after window load
+window.addEventListener('load', () => {
+    if (!map) {
+        console.log('Window loaded, trying to initialize map again...');
+        setTimeout(initializeMapWhenReady, 100);
     }
 });
 
