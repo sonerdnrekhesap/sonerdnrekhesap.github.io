@@ -6,6 +6,8 @@
     <meta name="description" content="ErkenUyar - Türkiye Deprem ve Afet Erken Uyarı Sistemi. Deprem, sel, yangın ve diğer afet riskleri hakkında anlık bilgi alın.">
     <title>ErkenUyar - Deprem ve Afet Erken Uyarı Sistemi</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -14,14 +16,13 @@
         <div class="container">
             <div class="nav-content">
                 <div class="logo">
-                    <img src="./logo.jpeg" alt="ErkenUyar Logo" class="logo-img">
-                    <span class="logo-text">ErkenUyar</span>
+                    <a href="index.html" class="logo-link">
+                        <img src="./logo.jpeg" alt="ErkenUyar Logo" class="logo-img">
+                        <span class="logo-text">ErkenUyar</span>
+                    </a>
                 </div>
                 <ul class="nav-menu" id="navMenu">
                     <li><a href="index.html" class="nav-link active">Ana Sayfa</a></li>
-                    <li><a href="#harita" class="nav-link">Harita</a></li>
-                    <li><a href="#sss" class="nav-link">SSS</a></li>
-                    <li><a href="#iletisim" class="nav-link">İletişim</a></li>
                     <li><a href="privacy.html" class="nav-link">Gizlilik Politikası</a></li>
                     <li><a href="terms.html" class="nav-link">Kullanım Koşulları</a></li>
                 </ul>
@@ -125,13 +126,25 @@
                     <div id="map" class="map-canvas" aria-label="ErkenUyar Canlı Harita"></div>
                     <div class="map-toolbar">
                         <label>
+                            Zaman Aralığı
+                            <select id="timeRange">
+                                <option value="8_hours">8 Saat</option>
+                                <option value="1_day" selected>1 Gün</option>
+                                <option value="7_days">7 Gün</option>
+                            </select>
+                        </label>
+                        <label>
                             Min. Büyüklük
                             <select id="minMag">
+                                <option value="2.0">2.0+</option>
                                 <option value="2.5">2.5+</option>
                                 <option value="3.0" selected>3.0+</option>
                                 <option value="4.0">4.0+</option>
                                 <option value="5.0">5.0+</option>
                             </select>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="showFires" checked> Yangınlar
                         </label>
                         <button id="refreshMap" type="button" class="btn btn-secondary">Yenile</button>
                     </div>
@@ -283,6 +296,7 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="./script.js" defer></script>
 </body>
 </html>

@@ -81,7 +81,19 @@ section {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--primary-color);
+}
+
+.logo-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.logo-link:hover {
+    opacity: 0.8;
 }
 
 .logo-img {
@@ -168,7 +180,9 @@ section {
         0 18px 40px rgba(0,0,0,.18),
         0 2px 8px rgba(0,0,0,.10);
     max-width: 200px;
-    max-height: 200px;
+    max-height: 200px; 
+    background-color: #fff;
+    padding: 3px;
 }
 
 .hero-appicon::after {
@@ -185,7 +199,6 @@ section {
     height: 100%;
     object-fit: contain;
     display: block;
-    padding: 14px;
 }
 
 .hero-title {
@@ -633,18 +646,33 @@ section {
 }
 
 .map-canvas {
-    width: 100%;
-    height: min(70vh, 520px);
-    min-height: 400px;
+    width: 100% !important;
+    height: min(70vh, 520px) !important;
+    min-height: 400px !important;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 
         inset 0 1px 0 rgba(255,255,255,.35),
         0 16px 36px rgba(0,0,0,.10);
     background: #cfe8ff;
-    display: block;
-    visibility: visible;
-    opacity: 1;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative;
+}
+
+/* Leaflet map container styles - ensure it fills the parent */
+#map.leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+    z-index: 1;
+    border-radius: 20px;
+}
+
+.map-canvas.leaflet-container {
+    height: 100% !important;
+    width: 100% !important;
+    z-index: 1;
 }
 
 .map-toolbar {
@@ -703,18 +731,54 @@ section {
 }
 
 /* Custom earthquake markers */
-.custom-marker {
+.earthquake-marker {
     background: transparent !important;
     border: none !important;
 }
 
-.custom-marker div {
+.earthquake-marker div {
     cursor: pointer;
     transition: transform 0.2s ease;
 }
 
-.custom-marker div:hover {
-    transform: scale(1.1);
+.earthquake-marker div:hover {
+    transform: scale(1.15);
+}
+
+/* Fire markers */
+.fire-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.fire-marker div {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.fire-marker div:hover {
+    transform: scale(1.2);
+}
+
+/* Marker cluster styles */
+.marker-cluster {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Map toolbar checkbox */
+.map-toolbar input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.map-toolbar label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
 }
 
 /* FAQ Section */
@@ -762,11 +826,6 @@ section {
     background: rgba(33, 150, 243, 0.05);
 }
 
-.faq-question:focus {
-    outline: 2px solid var(--primary-color);
-    outline-offset: -2px;
-}
-
 .faq-icon {
     font-size: 1.5rem;
     font-weight: 300;
@@ -783,19 +842,25 @@ section {
 .faq-answer {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.4s ease, padding 0.4s ease;
-    padding: 0 1.5rem;
+    opacity: 0;
+    transition: 
+        max-height 0.4s linear,
+        opacity 0.3s ease-out;
 }
 
 .faq-question[aria-expanded="true"] + .faq-answer {
-    max-height: 2000px;
-    padding: 0 1.5rem 1.5rem;
+    max-height: 1000px;
+    opacity: 1;
+    transition: 
+        max-height 0.4s linear,
+        opacity 0.3s ease-out 0.1s;
 }
 
 .faq-answer p {
     color: var(--text-secondary);
     line-height: 1.8;
     margin: 0;
+    padding: 0 1.5rem 1.5rem;
 }
 
 .faq-answer a {
