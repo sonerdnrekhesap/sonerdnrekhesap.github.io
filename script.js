@@ -232,60 +232,11 @@ function initMap() {
     map.addLayer(fireLayer);
     console.log('Fire layer created');
 
-    // Setup controls
-    const minMagSelect = document.getElementById('minMag');
-    const timeRangeSelect = document.getElementById('timeRange');
-    const showFiresCheckbox = document.getElementById('showFires');
-    const refreshBtn = document.getElementById('refreshMap');
-
     // Load saved preferences
+    const minMagSelect = document.getElementById('minMag');
     const savedMinMag = localStorage.getItem('erkenuyar_minMag');
     if (savedMinMag && minMagSelect) {
         minMagSelect.value = savedMinMag;
-    }
-
-    const reloadMap = () => {
-        const minMag = parseFloat(minMagSelect?.value || 3.0);
-        const timeRange = timeRangeSelect?.value || '1_day';
-        
-        // Save to localStorage
-        if (minMagSelect) {
-            localStorage.setItem('erkenuyar_minMag', minMagSelect.value);
-        }
-        
-        loadEarthquakes(minMag, false, timeRange);
-        if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
-            loadFires();
-        }
-    };
-
-    if (minMagSelect) {
-        minMagSelect.addEventListener('change', reloadMap);
-    }
-
-    if (timeRangeSelect) {
-        timeRangeSelect.addEventListener('change', reloadMap);
-    }
-
-    if (showFiresCheckbox) {
-        showFiresCheckbox.addEventListener('change', (e) => {
-            if (e.target.checked && map.getZoom() >= 5.0) {
-                loadFires();
-            } else {
-                fireLayer.clearLayers();
-            }
-        });
-    }
-
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            const minMag = parseFloat(minMagSelect?.value || 3.0);
-            const timeRange = timeRangeSelect?.value || '1_day';
-            loadEarthquakes(minMag, true, timeRange);
-            if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
-                loadFires(true);
-            }
-        });
     }
 
     // Viewport change handler for fires (debounced)
@@ -758,6 +709,95 @@ async function loadFires(forceRefresh = false) {
     };
 }
 
+// Setup event listeners for map controls
+function setupMapControls() {
+    const minMagSelect = document.getElementById('minMag');
+    const timeRangeSelect = document.getElementById('timeRange');
+    const showFiresCheckbox = document.getElementById('showFires');
+    const refreshBtn = document.getElementById('refreshMap');
+
+    if (!minMagSelect || !timeRangeSelect || !showFiresCheckbox || !refreshBtn) {
+        console.warn('Map controls not found, will retry...');
+        setTimeout(setupMapControls, 100);
+        return;
+    }
+
+    console.log('Setting up map controls event listeners');
+
+    const reloadMap = () => {
+        console.log('reloadMap called');
+        if (!map || !earthquakeClusterGroup) {
+            console.warn('Map not initialized yet, cannot reload');
+            return;
+        }
+        
+        const minMag = parseFloat(minMagSelect.value || 3.0);
+        const timeRange = timeRangeSelect.value || '1_day';
+        
+        console.log('Reloading with:', { minMag, timeRange });
+        
+        // Save to localStorage
+        localStorage.setItem('erkenuyar_minMag', minMagSelect.value);
+        
+        loadEarthquakes(minMag, false, timeRange);
+        if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
+            loadFires();
+        }
+    };
+
+    // Remove any existing listeners by cloning (clean slate)
+    const oldMinMag = minMagSelect.cloneNode(true);
+    const oldTimeRange = timeRangeSelect.cloneNode(true);
+    
+    minMagSelect.parentNode.replaceChild(oldMinMag, minMagSelect);
+    timeRangeSelect.parentNode.replaceChild(oldTimeRange, timeRangeSelect);
+    
+    // Get fresh references
+    const newMinMag = document.getElementById('minMag');
+    const newTimeRange = document.getElementById('timeRange');
+
+    // Add event listeners
+    newMinMag.addEventListener('change', (e) => {
+        console.log('minMagSelect changed:', e.target.value);
+        reloadMap();
+    }, { passive: true });
+
+    newTimeRange.addEventListener('change', (e) => {
+        console.log('timeRangeSelect changed:', e.target.value);
+        reloadMap();
+    }, { passive: true });
+
+    showFiresCheckbox.addEventListener('change', (e) => {
+        console.log('showFiresCheckbox changed:', e.target.checked);
+        if (!map || !fireLayer) {
+            console.warn('Map not initialized yet');
+            return;
+        }
+        if (e.target.checked && map.getZoom() >= 5.0) {
+            loadFires();
+        } else {
+            fireLayer.clearLayers();
+        }
+    }, { passive: true });
+
+    refreshBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Refresh button clicked');
+        if (!map || !earthquakeClusterGroup) {
+            console.warn('Map not initialized yet');
+            return;
+        }
+        const minMag = parseFloat(newMinMag.value || 3.0);
+        const timeRange = newTimeRange.value || '1_day';
+        loadEarthquakes(minMag, true, timeRange);
+        if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
+            loadFires(true);
+        }
+    }, { passive: false });
+
+    console.log('Map controls event listeners set up successfully');
+}
+
 // Initialize map when DOM is ready
 function initializeMapWhenReady() {
     console.log('Checking for Leaflet...');
@@ -779,18 +819,24 @@ function initializeMapWhenReady() {
     console.log('Map element found, initializing...');
     try {
         initMap();
+        // Setup controls after map is initialized
+        setupMapControls();
     } catch (error) {
         console.error('Error initializing map:', error);
         // Retry once more
         setTimeout(() => {
             try {
                 initMap();
+                setupMapControls();
             } catch (e) {
                 console.error('Second attempt failed:', e);
             }
         }, 500);
     }
 }
+
+// Setup controls early (before map init)
+setupMapControls();
 
 // Try multiple initialization strategies
 if (document.readyState === 'loading') {
@@ -806,6 +852,8 @@ window.addEventListener('load', () => {
         console.log('Window loaded, trying to initialize map again...');
         setTimeout(initializeMapWhenReady, 100);
     }
+    // Re-setup controls in case they weren't set up before
+    setupMapControls();
 });
 
 // Console message
