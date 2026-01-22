@@ -238,8 +238,11 @@ function initMap() {
     map.addLayer(fireLayer);
     console.log('Fire layer created');
 
-    // Load saved preferences
+    // Load saved preferences and get element references
     const minMagSelect = document.getElementById('minMag');
+    const timeRangeSelect = document.getElementById('timeRange');
+    const showFiresCheckbox = document.getElementById('showFires');
+    
     const savedMinMag = localStorage.getItem('erkenuyar_minMag');
     if (savedMinMag && minMagSelect) {
         minMagSelect.value = savedMinMag;
@@ -247,7 +250,6 @@ function initMap() {
 
     // Viewport change handler for fires (debounced)
     map.on('moveend', () => {
-        const showFiresCheckbox = document.getElementById('showFires');
         if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
             clearTimeout(fireDebounceTimer);
             fireDebounceTimer = setTimeout(() => {
@@ -257,9 +259,6 @@ function initMap() {
     });
 
     // Initial load
-    const minMagSelect = document.getElementById('minMag');
-    const timeRangeSelect = document.getElementById('timeRange');
-    const showFiresCheckbox = document.getElementById('showFires');
     
     const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
     const initialTimeRange = timeRangeSelect?.value || '1_day';
