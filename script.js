@@ -753,29 +753,6 @@ function setupMapControls() {
 
     console.log('Setting up map controls event listeners');
 
-    const reloadMap = () => {
-        console.log('reloadMap called');
-        if (!map || !earthquakeClusterGroup) {
-            console.warn('Map not initialized yet, cannot reload');
-            return;
-        }
-        
-        const minMag = parseFloat(minMagSelect.value || 3.0);
-        const timeRange = timeRangeSelect.value || '1_day';
-        
-        console.log('Reloading with:', { minMag, timeRange });
-        
-        // Save to localStorage
-        localStorage.setItem('erkenuyar_minMag', minMagSelect.value);
-        localStorage.setItem('erkenuyar_timeRange', timeRange);
-        
-        // Force refresh when filter changes (bypass cache)
-        loadEarthquakes(minMag, true, timeRange);
-        if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
-            loadFires(true);
-        }
-    };
-
     // Remove any existing listeners by cloning (clean slate)
     const oldMinMag = minMagSelect.cloneNode(true);
     const oldTimeRange = timeRangeSelect.cloneNode(true);
@@ -787,15 +764,43 @@ function setupMapControls() {
     const newMinMag = document.getElementById('minMag');
     const newTimeRange = document.getElementById('timeRange');
 
+    const reloadMap = (overrideMinMag = null, overrideTimeRange = null) => {
+        console.log('reloadMap called', { overrideMinMag, overrideTimeRange });
+        if (!map || !earthquakeClusterGroup) {
+            console.warn('Map not initialized yet, cannot reload');
+            return;
+        }
+        
+        // Use override values if provided, otherwise get from DOM
+        const minMag = overrideMinMag !== null ? parseFloat(overrideMinMag) : parseFloat(newMinMag.value || 3.0);
+        const timeRange = overrideTimeRange !== null ? overrideTimeRange : (newTimeRange.value || '1_day');
+        
+        console.log('Reloading with:', { minMag, timeRange, minMagValue: newMinMag.value, timeRangeValue: newTimeRange.value });
+        
+        // Save to localStorage
+        localStorage.setItem('erkenuyar_minMag', overrideMinMag !== null ? overrideMinMag : newMinMag.value);
+        localStorage.setItem('erkenuyar_timeRange', timeRange);
+        
+        // Force refresh when filter changes (bypass cache)
+        loadEarthquakes(minMag, true, timeRange);
+        if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
+            loadFires(true);
+        }
+    };
+
     // Add event listeners
     newMinMag.addEventListener('change', (e) => {
-        console.log('minMagSelect changed:', e.target.value);
-        reloadMap();
+        const newValue = e.target.value;
+        console.log('minMagSelect changed:', newValue);
+        // Get current timeRange value from DOM
+        reloadMap(newValue, newTimeRange.value);
     }, { passive: true });
 
     newTimeRange.addEventListener('change', (e) => {
-        console.log('timeRangeSelect changed:', e.target.value);
-        reloadMap();
+        const newValue = e.target.value;
+        console.log('timeRangeSelect changed:', newValue);
+        // Get current minMag value from DOM
+        reloadMap(newMinMag.value, newValue);
     }, { passive: true });
 
     showFiresCheckbox.addEventListener('change', (e) => {
@@ -814,16 +819,7 @@ function setupMapControls() {
     refreshBtn.addEventListener('click', (e) => {
         e.preventDefault();
         console.log('Refresh button clicked');
-        if (!map || !earthquakeClusterGroup) {
-            console.warn('Map not initialized yet');
-            return;
-        }
-        const minMag = parseFloat(newMinMag.value || 3.0);
-        const timeRange = newTimeRange.value || '1_day';
-        loadEarthquakes(minMag, true, timeRange);
-        if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
-            loadFires(true);
-        }
+        reloadMap();
     }, { passive: false });
 
     console.log('Map controls event listeners set up successfully');
