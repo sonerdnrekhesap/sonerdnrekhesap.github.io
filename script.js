@@ -132,6 +132,12 @@ const INDUSTRIAL_ZONES = [
 
 // Initialize map
 function initMap() {
+    // Check if map is already initialized
+    if (map) {
+        console.warn('Map already initialized, skipping...');
+        return;
+    }
+    
     const mapElement = document.getElementById('map');
     if (!mapElement) {
         console.error('Map element not found');
@@ -241,6 +247,7 @@ function initMap() {
 
     // Viewport change handler for fires (debounced)
     map.on('moveend', () => {
+        const showFiresCheckbox = document.getElementById('showFires');
         if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
             clearTimeout(fireDebounceTimer);
             fireDebounceTimer = setTimeout(() => {
@@ -250,6 +257,10 @@ function initMap() {
     });
 
     // Initial load
+    const minMagSelect = document.getElementById('minMag');
+    const timeRangeSelect = document.getElementById('timeRange');
+    const showFiresCheckbox = document.getElementById('showFires');
+    
     const initialMinMag = parseFloat(minMagSelect?.value || 3.0);
     const initialTimeRange = timeRangeSelect?.value || '1_day';
     loadEarthquakes(initialMinMag, false, initialTimeRange);
@@ -260,14 +271,17 @@ function initMap() {
 
     // Auto-refresh earthquakes every 90 seconds
     updateInterval = setInterval(() => {
-        const minMag = parseFloat(minMagSelect?.value || 3.0);
-        const timeRange = timeRangeSelect?.value || '1_day';
+        const minMagSelectEl = document.getElementById('minMag');
+        const timeRangeSelectEl = document.getElementById('timeRange');
+        const minMag = parseFloat(minMagSelectEl?.value || 3.0);
+        const timeRange = timeRangeSelectEl?.value || '1_day';
         loadEarthquakes(minMag, false, timeRange);
     }, 90000);
 
     // Auto-refresh fires every 2 minutes
     fireUpdateInterval = setInterval(() => {
-        if (showFiresCheckbox?.checked && map.getZoom() >= 5.0) {
+        const showFiresCheckboxEl = document.getElementById('showFires');
+        if (showFiresCheckboxEl?.checked && map.getZoom() >= 5.0) {
             loadFires();
         }
     }, 120000);
@@ -387,6 +401,54 @@ function normalizeEarthquakeData(data) {
     return normalized;
 }
 
+// Helper function to create earthquake marker
+function createEarthquakeMarker(eq) {
+    const color = getMagnitudeColor(eq.mag);
+    const magText = eq.mag.toFixed(1);
+    const radius = 32;
+    const iconHtml = `
+        <div style="
+            width: ${radius}px;
+            height: ${radius}px;
+            border-radius: 50%;
+            background-color: ${color};
+            border: 3px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 0 8px ${color}40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 11px;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        ">${magText}</div>
+    `;
+    const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'earthquake-marker',
+        iconSize: [radius, radius],
+        iconAnchor: [radius / 2, radius / 2]
+    });
+    const marker = L.marker([eq.lat, eq.lon], { icon: customIcon });
+    const timeStr = new Date(eq.time).toLocaleString('tr-TR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    marker.bindPopup(`
+        <div style="min-width: 200px;">
+            <strong style="font-size: 1.1em; color: ${color};">M ${magText}</strong><br>
+            <strong>Derinlik:</strong> ${eq.depth.toFixed(1)} km<br>
+            <strong>Konum:</strong> ${eq.place}<br>
+            <strong>Zaman:</strong> ${timeStr}<br>
+            <strong>Kaynak:</strong> ${eq.source}
+        </div>
+    `);
+    return marker;
+}
+
 // Load and display earthquakes
 async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = '1_day') {
     console.log('loadEarthquakes called:', { minMag, timeRange, forceRefresh });
@@ -402,10 +464,26 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = '
     }
 
     const cacheKey = `eq-${minMag}-${timeRange}`;
+    
+    // If cache key changed, clear old cache
+    if (lastEqDataCache && lastEqDataCache.key !== cacheKey) {
+        console.log('Cache key changed, clearing old cache');
+        lastEqDataCache = null;
+    }
+    
     if (!forceRefresh && lastEqDataCache && lastEqDataCache.key === cacheKey) {
         const cacheAge = Date.now() - lastEqDataCache.timestamp;
         if (cacheAge < 300000) { // 5 minutes TTL
             console.log('Using cached data');
+            // Still need to render markers even if using cache
+            if (lastEqDataCache.data && lastEqDataCache.data.length > 0) {
+                console.log('Rendering cached markers');
+                earthquakeClusterGroup.clearLayers();
+                lastEqDataCache.data.forEach(eq => {
+                    const marker = createEarthquakeMarker(eq);
+                    earthquakeClusterGroup.addLayer(marker);
+                });
+            }
             return;
         }
     }
@@ -431,55 +509,7 @@ async function loadEarthquakes(minMag = 3.0, forceRefresh = false, timeRange = '
 
     let markerCount = 0;
     earthquakes.forEach(eq => {
-        const color = getMagnitudeColor(eq.mag);
-        const magText = eq.mag.toFixed(1);
-        const radius = 32;
-
-        const iconHtml = `
-            <div style="
-                width: ${radius}px;
-                height: ${radius}px;
-                border-radius: 50%;
-                background-color: ${color};
-                border: 3px solid #fff;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3), 0 0 8px ${color}40;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 11px;
-                color: #fff;
-                text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-            ">${magText}</div>
-        `;
-
-        const customIcon = L.divIcon({
-            html: iconHtml,
-            className: 'earthquake-marker',
-            iconSize: [radius, radius],
-            iconAnchor: [radius / 2, radius / 2]
-        });
-
-        const marker = L.marker([eq.lat, eq.lon], { icon: customIcon });
-
-        const timeStr = new Date(eq.time).toLocaleString('tr-TR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
-        marker.bindPopup(`
-            <div style="min-width: 200px;">
-                <strong style="font-size: 1.1em; color: ${color};">M ${magText}</strong><br>
-                <strong>Derinlik:</strong> ${eq.depth.toFixed(1)} km<br>
-                <strong>Konum:</strong> ${eq.place}<br>
-                <strong>Zaman:</strong> ${timeStr}<br>
-                <strong>Kaynak:</strong> ${eq.source}
-            </div>
-        `);
-
+        const marker = createEarthquakeMarker(eq);
         earthquakeClusterGroup.addLayer(marker);
         markerCount++;
     });
@@ -738,10 +768,12 @@ function setupMapControls() {
         
         // Save to localStorage
         localStorage.setItem('erkenuyar_minMag', minMagSelect.value);
+        localStorage.setItem('erkenuyar_timeRange', timeRange);
         
-        loadEarthquakes(minMag, false, timeRange);
+        // Force refresh when filter changes (bypass cache)
+        loadEarthquakes(minMag, true, timeRange);
         if (showFiresCheckbox.checked && map.getZoom() >= 5.0) {
-            loadFires();
+            loadFires(true);
         }
     };
 
@@ -817,21 +849,30 @@ function initializeMapWhenReady() {
     }
     
     console.log('Map element found, initializing...');
+    
+    // Check if map is already initialized
+    if (map) {
+        console.log('Map already initialized, skipping...');
+        return;
+    }
+    
     try {
         initMap();
         // Setup controls after map is initialized
         setupMapControls();
     } catch (error) {
         console.error('Error initializing map:', error);
-        // Retry once more
-        setTimeout(() => {
-            try {
-                initMap();
-                setupMapControls();
-            } catch (e) {
-                console.error('Second attempt failed:', e);
-            }
-        }, 500);
+        // Only retry if map is not already initialized
+        if (!map) {
+            setTimeout(() => {
+                try {
+                    initMap();
+                    setupMapControls();
+                } catch (e) {
+                    console.error('Second attempt failed:', e);
+                }
+            }, 500);
+        }
     }
 }
 
