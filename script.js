@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // Güvenlik notları:
 // - Bu dosyada hiçbir API anahtarı yoktur ve olmamalıdır (site herkese açık bir depodan yayınlanır).
+// - Termal noktalar NASA'nın anahtarsız açık görüntü servisinden okunur.
 // - Dış kaynaktan gelen metinler (yer adı vb.) sayfaya yalnızca textContent ile yazılır.
 (function () {
     'use strict';
@@ -291,33 +292,173 @@ document.addEventListener('DOMContentLoaded', () => {
         : L.layerGroup();
     map.addLayer(quakeLayer);
 
-    // Termal harita: NASA GIBS (anahtar gerektirmeyen açık servis). VIIRS uydularının son iki günde
-    // algıladığı sıcak noktalar (yangın, anız, sanayi tesisi) görüntü olarak bindirilir.
+    // ---- Termal harita ----
+    // Kaynak: NASA GIBS (anahtar gerektirmeyen açık servis), VIIRS uydularının sıcak noktaları.
+    // Servis noktaları yalnızca görüntü olarak verir ve her yakınlaştırmada 5 piksel çizer; yaklaşınca
+    // noktalar küçük ve seyrek kalır. Bu yüzden tüm Türkiye için tek bir görüntü alınır, içindeki
+    // noktalar okunur ve haritaya sabit boyutlu, tıklanabilir işaretler olarak eklenir.
+    const MERC_R = 20037508.342789244;
+    const mercX = (lon) => lon * MERC_R / 180;
+    const mercY = (lat) => Math.log(Math.tan((90 + lat) * Math.PI / 360)) * MERC_R / Math.PI;
+    const THERMAL = {
+        width: 2048, height: 1056,
+        minX: mercX(BOUNDS.minLon), maxX: mercX(BOUNDS.maxLon),
+        minY: mercY(BOUNDS.minLat), maxY: mercY(BOUNDS.maxLat),
+        refreshMs: 30 * 60 * 1000
+    };
+    // Sürekli sıcak görünen tesisler: buradaki noktalar yangın değil, sanayi kaynağı olarak etiketlenir.
+    const INDUSTRIAL_ZONES = [
+        { lat: 40.85, lon: 29.30, r: 0.05, name: 'Tuzla sanayi bölgesi' },
+        { lat: 40.95, lon: 28.70, r: 0.03, name: 'Ambarlı santrali' },
+        { lat: 38.80, lon: 26.95, r: 0.04, name: 'Aliağa sanayi bölgesi' },
+        { lat: 40.77, lon: 29.93, r: 0.04, name: 'İzmit sanayi bölgesi' },
+        { lat: 38.20, lon: 36.90, r: 0.03, name: 'Afşin-Elbistan santrali' },
+        { lat: 39.20, lon: 27.60, r: 0.03, name: 'Soma santrali' },
+        { lat: 37.05, lon: 28.35, r: 0.03, name: 'Yatağan santrali' },
+        { lat: 36.85, lon: 28.20, r: 0.03, name: 'Kemerköy santrali' },
+        { lat: 36.60, lon: 36.20, r: 0.03, name: 'İskenderun demir-çelik' },
+        { lat: 41.20, lon: 32.65, r: 0.03, name: 'Karabük demir-çelik' },
+        { lat: 41.30, lon: 31.40, r: 0.03, name: 'Ereğli demir-çelik' }
+    ];
+    const thermalInfoEl = document.getElementById('thermalInfo');
+    const thermalRenderer = L.canvas({ padding: 0.5 });
+    const thermalLayer = L.layerGroup();
+    let thermalSeq = 0;
+
     function utcDay(offsetDays) {
         return new Date(Date.now() - offsetDays * 86400000).toISOString().slice(0, 10);
     }
-    function buildThermalLayer() {
-        const days = [utcDay(1), utcDay(0)];
-        return L.layerGroup(days.map((day) => L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', {
-            layers: 'VIIRS_NOAA20_Thermal_Anomalies_375m_All,VIIRS_NOAA21_Thermal_Anomalies_375m_All',
-            format: 'image/png',
-            transparent: true,
-            version: '1.1.1',
-            time: day,
-            opacity: 0.95,
-            attribution: 'Termal veri: NASA EOSDIS GIBS / FIRMS'
-        })));
+
+    function loadThermalImage(day) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const timer = setTimeout(() => { img.src = ''; reject(new Error('timeout')); }, 25000);
+            img.onload = () => { clearTimeout(timer); resolve(img); };
+            img.onerror = () => { clearTimeout(timer); reject(new Error('image_error')); };
+            img.src = 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi' +
+                '?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&STYLES=&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857' +
+                '&LAYERS=VIIRS_NOAA20_Thermal_Anomalies_375m_All,VIIRS_NOAA21_Thermal_Anomalies_375m_All' +
+                `&WIDTH=${THERMAL.width}&HEIGHT=${THERMAL.height}&TIME=${day}` +
+                `&BBOX=${THERMAL.minX},${THERMAL.minY},${THERMAL.maxX},${THERMAL.maxY}`;
+        });
     }
-    let thermalLayer = null;
-    function syncThermal() {
-        const wanted = !thermalCheckbox || thermalCheckbox.checked;
-        if (wanted && !thermalLayer) {
-            thermalLayer = buildThermalLayer();
-            map.addLayer(thermalLayer);
-        } else if (!wanted && thermalLayer) {
-            map.removeLayer(thermalLayer);
-            thermalLayer = null;
+
+    // Görüntüdeki dolu piksel kümelerini bulur; her nokta yaklaşık 5 piksellik bir lekedir.
+    // Bitişik noktaların oluşturduğu büyük lekeler 5 piksellik ızgarayla ayrı noktalara bölünür.
+    function extractHotspots(img) {
+        const w = THERMAL.width, h = THERMAL.height;
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+        const filled = (x, y) => data[(y * w + x) * 4 + 3] > 100;
+        const seen = new Uint8Array(w * h);
+        const pixels = [];
+        const stack = [];
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                if (seen[y * w + x] || !filled(x, y)) continue;
+                let minX = x, maxX = x, minY = y, maxY = y, sumX = 0, sumY = 0, n = 0;
+                stack.push(x, y); seen[y * w + x] = 1;
+                while (stack.length) {
+                    const cy = stack.pop(), cx = stack.pop();
+                    n++; sumX += cx; sumY += cy;
+                    if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+                    if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+                    for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                        if (seen[ny * w + nx] || !filled(nx, ny)) continue;
+                        seen[ny * w + nx] = 1; stack.push(nx, ny);
+                    }
+                }
+                if (n < 6) continue; // kenar yumuşatma artığı
+                if (maxX - minX <= 7 && maxY - minY <= 7) {
+                    pixels.push([sumX / n, sumY / n]);
+                } else {
+                    for (let gy = minY + 2; gy <= maxY; gy += 5) {
+                        for (let gx = minX + 2; gx <= maxX; gx += 5) {
+                            if (filled(Math.min(gx, w - 1), Math.min(gy, h - 1))) pixels.push([gx, gy]);
+                        }
+                    }
+                }
+            }
         }
+        return pixels.map(([px, py]) => {
+            const mx = THERMAL.minX + (px + 0.5) / w * (THERMAL.maxX - THERMAL.minX);
+            const my = THERMAL.maxY - (py + 0.5) / h * (THERMAL.maxY - THERMAL.minY);
+            return {
+                lon: mx / MERC_R * 180,
+                lat: Math.atan(Math.sinh(my / MERC_R * Math.PI)) * 180 / Math.PI
+            };
+        });
+    }
+
+    function industrialZoneOf(point) {
+        return INDUSTRIAL_ZONES.find((z) => Math.hypot(point.lat - z.lat, point.lon - z.lon) <= z.r) || null;
+    }
+
+    function thermalMarker(point, day, isToday) {
+        const zone = industrialZoneOf(point);
+        const fill = zone ? '#6d4c41' : (isToday ? '#e53935' : '#fb8c00');
+        const marker = L.circleMarker([point.lat, point.lon], {
+            renderer: thermalRenderer, radius: 6, color: '#ffffff', weight: 1.5,
+            fillColor: fill, fillOpacity: 0.9
+        });
+        const box = document.createElement('div');
+        box.className = 'eq-popup';
+        const title = document.createElement('strong');
+        title.className = 'eq-popup-title';
+        title.style.color = fill;
+        title.textContent = zone ? 'Sanayi kaynaklı sıcak nokta' : 'Uydu sıcak noktası';
+        box.appendChild(title);
+        if (zone) popupRow(box, 'Tesis', zone.name);
+        popupRow(box, 'Uydu geçiş günü', `${day.slice(8, 10)}.${day.slice(5, 7)}.${day.slice(0, 4)}`);
+        popupRow(box, 'Yaklaşık konum', `${point.lat.toFixed(2)}°K, ${point.lon.toFixed(2)}°D`);
+        const note = document.createElement('div');
+        note.className = 'eq-popup-note';
+        note.textContent = zone
+            ? 'Bu bölgede sürekli çalışan tesisler uyduda sıcak görünür.'
+            : 'Yangın, anız yakma veya başka bir ısı kaynağı olabilir. Her nokta yangın değildir.';
+        box.appendChild(note);
+        marker.bindPopup(box);
+        return marker;
+    }
+
+    async function loadThermal() {
+        const seq = ++thermalSeq;
+        if (thermalInfoEl) thermalInfoEl.textContent = 'Termal veri yükleniyor…';
+        const days = [{ day: utcDay(1), isToday: false }, { day: utcDay(0), isToday: true }];
+        const results = await Promise.allSettled(days.map((d) => loadThermalImage(d.day).then(extractHotspots)));
+        if (seq !== thermalSeq) return;
+        if (results.every((r) => r.status === 'rejected')) {
+            if (thermalInfoEl) thermalInfoEl.textContent = 'Termal veri şu an alınamıyor.';
+            return;
+        }
+        thermalLayer.clearLayers();
+        let total = 0;
+        results.forEach((r, i) => {
+            if (r.status !== 'fulfilled') return;
+            r.value.forEach((p) => thermalLayer.addLayer(thermalMarker(p, days[i].day, days[i].isToday)));
+            total += r.value.length;
+        });
+        if (thermalInfoEl) {
+            thermalInfoEl.textContent = total
+                ? `Son iki günde ${total} sıcak nokta (kaynak: NASA VIIRS uyduları).`
+                : 'Son iki günde sıcak nokta algılanmadı (kaynak: NASA VIIRS uyduları).';
+        }
+    }
+
+    function syncThermal(reload) {
+        const wanted = !thermalCheckbox || thermalCheckbox.checked;
+        if (!wanted) {
+            map.removeLayer(thermalLayer);
+            if (thermalInfoEl) thermalInfoEl.textContent = 'Termal harita kapalı.';
+            return;
+        }
+        if (!map.hasLayer(thermalLayer)) map.addLayer(thermalLayer);
+        if (reload || thermalLayer.getLayers().length === 0) loadThermal();
     }
 
     // ---- Deprem yükleme ----
@@ -370,10 +511,9 @@ document.addEventListener('DOMContentLoaded', () => {
         writePref('erkenuyar_timeRange', timeRangeSelect.value);
         loadEarthquakes();
     });
-    if (thermalCheckbox) thermalCheckbox.addEventListener('change', syncThermal);
+    if (thermalCheckbox) thermalCheckbox.addEventListener('change', () => syncThermal(false));
     if (refreshBtn) refreshBtn.addEventListener('click', () => {
-        if (thermalLayer) { map.removeLayer(thermalLayer); thermalLayer = null; }
-        syncThermal();
+        syncThermal(true);
         loadEarthquakes();
     });
     // Konum yalnızca kullanıcı düğmeye basınca istenir (sayfa açılır açılmaz izin sorulmaz).
@@ -391,9 +531,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    syncThermal();
+    syncThermal(false);
     loadEarthquakes();
     setInterval(() => { if (!document.hidden) loadEarthquakes(); }, REFRESH_MS);
+    setInterval(() => { if (!document.hidden) syncThermal(true); }, THERMAL.refreshMs);
     setTimeout(() => map.invalidateSize(), 250);
     window.addEventListener('load', () => map.invalidateSize());
 })();

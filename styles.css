@@ -1017,7 +1017,10 @@ section {
     margin: 0 4px 0 10px; vertical-align: middle;
 }
 .legend-eq { background: #f57c00; }
-.legend-thermal { background: #e53935; border-radius: 2px; }
+.legend-thermal { background: #e53935; }
+.legend-thermal-old { background: #fb8c00; }
+.legend-industrial { background: #6d4c41; }
+.eq-popup-note { margin-top: 6px; font-size: 0.85em; color: #555; }
 @media (max-width: 768px) {
     .map-toolbar label:has(input[type="checkbox"]) { justify-content: flex-start; }
 }

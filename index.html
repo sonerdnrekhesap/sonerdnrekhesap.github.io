@@ -158,8 +158,14 @@
                     </div>
                     <p id="mapStatus" class="map-status" role="status" aria-live="polite">Deprem verisi yükleniyor…</p>
                     <p class="map-legend">
-                        <span class="legend-dot legend-eq"></span> Depremler (renk büyüklüğe göre)
-                        <span class="legend-dot legend-thermal"></span> Termal harita: uyduların son iki günde algıladığı sıcak noktalar (yangın, anız, sanayi tesisi). Her nokta yangın değildir.
+                        <span class="legend-dot legend-eq"></span> Deprem (renk büyüklüğe göre)
+                        <span class="legend-dot legend-thermal"></span> Bugünkü sıcak nokta
+                        <span class="legend-dot legend-thermal-old"></span> Dünkü sıcak nokta
+                        <span class="legend-dot legend-industrial"></span> Sanayi kaynağı
+                    </p>
+                    <p class="map-legend">
+                        <span id="thermalInfo">Termal veri yükleniyor…</span>
+                        Sıcak noktalar yangın, anız yakma veya sanayi tesisi olabilir; her nokta yangın değildir. Ayrıntı için noktaya dokunun.
                     </p>
                     <p class="map-note">
                         Harita bilgilendirme amaçlıdır ve resmî kurum uyarılarının yerine geçmez.
