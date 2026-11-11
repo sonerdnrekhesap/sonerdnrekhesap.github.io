@@ -1129,3 +1129,11 @@ section {
     border: 1px solid rgba(0, 0, 0, 0.15);
     background: linear-gradient(to right, #b39ddb, #90caf9, #81d4fa, #80cbc4, #aed581, #dce775, #fff176, #ffd54f, #ffb74d, #fb8c00, #f4511e);
 }
+
+
+/* Tekerlek ipucu: sayfa kaydırılırken harita tekerleği yutmaz */
+.map-wheel-hint {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 1000;
+    background: rgba(31, 31, 31, 0.82); color: #fff; padding: 8px 14px; border-radius: 999px;
+    font-size: 0.85rem; pointer-events: none; white-space: nowrap;
+}

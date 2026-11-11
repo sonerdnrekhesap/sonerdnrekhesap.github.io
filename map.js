@@ -1,91 +1,3 @@
-// Mobile Menu Toggle
-const menuToggle = document.getElementById('menuToggle');
-const navMenu = document.getElementById('navMenu');
-
-if (menuToggle && navMenu) {
-    menuToggle.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-        menuToggle.classList.toggle('active');
-    });
-}
-
-// Close menu when clicking on a link
-const navLinks = document.querySelectorAll('.nav-link');
-navLinks.forEach(link => {
-    link.addEventListener('click', () => {
-        if (!navMenu || !menuToggle) return;
-        navMenu.classList.remove('active');
-        menuToggle.classList.remove('active');
-    });
-});
-
-// Active navigation link on scroll
-const sections = document.querySelectorAll('section[id]');
-
-function scrollActive() {
-    const scrollY = window.pageYOffset;
-
-    sections.forEach(section => {
-        const sectionHeight = section.offsetHeight;
-        const sectionTop = section.offsetTop - 100;
-        const sectionId = section.getAttribute('id');
-
-        if (scrollY > sectionTop && scrollY <= sectionTop + sectionHeight) {
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === `#${sectionId}`) {
-                    link.classList.add('active');
-                }
-            });
-        }
-    });
-}
-
-window.addEventListener('scroll', scrollActive);
-
-// Smooth scroll for anchor links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            const offsetTop = target.offsetTop - 80;
-            window.scrollTo({
-                top: offsetTop,
-                behavior: 'smooth'
-            });
-        }
-    });
-});
-
-// Fade-in animation removed to ensure content is always visible
-// Content visibility is now handled purely by CSS
-
-// FAQ Accordion
-document.addEventListener('DOMContentLoaded', () => {
-    const faqQuestions = document.querySelectorAll('.faq-question');
-    
-    faqQuestions.forEach(question => {
-        question.addEventListener('click', () => {
-            const isExpanded = question.getAttribute('aria-expanded') === 'true';
-            const answer = document.getElementById(question.getAttribute('aria-controls'));
-            
-            // Close all other FAQ items
-            faqQuestions.forEach(q => {
-                if (q !== question) {
-                    q.setAttribute('aria-expanded', 'false');
-                }
-            });
-            
-            // Toggle current item
-            question.setAttribute('aria-expanded', !isExpanded);
-            
-            // Let CSS handle the animation via aria-expanded attribute
-            // The max-height is controlled by CSS based on aria-expanded
-        });
-    });
-});
-
 // ============================================================
 // DEPREM VE TERMAL HARİTA
 // ============================================================
@@ -287,7 +199,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---- Harita ----
-    const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12, zoomControl: false });
+    const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12, zoomControl: false,
+        scrollWheelZoom: false });
+    // Fare tekerleği: sayfa kaydırılırken harita tekerleği yutmasın. Haritaya tıklanınca tekerlekle
+    // yakınlaştırma açılır, fare haritadan çıkınca kapanır.
+    const wheelHint = document.createElement('div');
+    wheelHint.className = 'map-wheel-hint';
+    wheelHint.textContent = 'Tekerlekle yakınlaştırmak için haritaya tıklayın';
+    wheelHint.hidden = true;
+    mapEl.appendChild(wheelHint);
+    let wheelHintTimer = null;
+    map.on('click', () => { map.scrollWheelZoom.enable(); wheelHint.hidden = true; });
+    mapEl.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+    mapEl.addEventListener('wheel', () => {
+        if (map.scrollWheelZoom.enabled()) return;
+        wheelHint.hidden = false;
+        clearTimeout(wheelHintTimer);
+        wheelHintTimer = setTimeout(() => { wheelHint.hidden = true; }, 1600);
+    }, { passive: true });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // İl alanları ayrı bir bölmede ve "multiply" karışımıyla çizilir: renk haritayı boyar ama
     // alttaki şehir adları ve yollar silikleşmez.
@@ -1060,7 +989,16 @@ document.addEventListener('DOMContentLoaded', () => {
             locateBtn.addEventListener('click', () => {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 8),
-                    () => setModeStatus(activeMode, 'Konum alınamadı. Tarayıcı konum iznini kontrol edin.', true),
+                    () => {
+                        // Konum hatası katmanın kendi durum metninin yerine kalıcı olarak geçmesin.
+                        const mode = activeMode;
+                        const previous = statusByMode[mode];
+                        setModeStatus(mode, 'Konum alınamadı. Tarayıcı konum iznini kontrol edin.', true);
+                        setTimeout(() => {
+                            const now = statusByMode[mode];
+                            if (previous && now && now.text.startsWith('Konum alınamadı')) setModeStatus(mode, previous.text, previous.isError);
+                        }, 4000);
+                    },
                     { maximumAge: 5 * 60 * 1000, timeout: 10000 }
                 );
             });
@@ -1069,7 +1007,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setMode(readPref('erkenuyar_mapMode') || 'quakes', false);
     // Açık olan katman kendini yeniler (deprem 90 sn; diğerleri kendi sürelerine göre).
-    setInterval(() => { if (!document.hidden) MODES[activeMode].load(false); }, REFRESH_MS);
+    let mapOnScreen = true;
+    if ('IntersectionObserver' in window) {
+        new IntersectionObserver((entries) => {
+            const wasOff = !mapOnScreen;
+            mapOnScreen = entries[0].isIntersecting;
+            if (mapOnScreen && wasOff) MODES[activeMode].load(false); // geri gelince hemen tazele
+        }).observe(mapEl);
+    }
+    setInterval(() => { if (!document.hidden && mapOnScreen) MODES[activeMode].load(false); }, REFRESH_MS);
     setTimeout(() => map.invalidateSize(), 250);
     window.addEventListener('load', () => map.invalidateSize());
 })();
