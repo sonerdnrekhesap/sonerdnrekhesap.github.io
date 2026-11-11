@@ -289,6 +289,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- Harita ----
     const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12, zoomControl: false });
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    // İl alanları ayrı bir bölmede ve "multiply" karışımıyla çizilir: renk haritayı boyar ama
+    // alttaki şehir adları ve yollar silikleşmez.
+    const shapePane = map.createPane('shapes');
+    shapePane.style.zIndex = 350;
+    shapePane.style.mixBlendMode = 'multiply';
+    const shapeRenderer = L.svg({ pane: 'shapes' });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '© <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> katkıcıları'
@@ -480,21 +486,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let weatherLoadedAt = 0;
     let weatherSeq = 0;
 
-    function weatherMarker(province, w) {
+    function weatherBox(provinceName, w, compact) {
         const now = wmoInfo(w.current.weather_code);
         const temp = Math.round(Number(w.current.temperature_2m));
-        const icon = L.divIcon({
-            html: `<div class="wx-chip">${now.icon} ${temp}°</div>`,
-            className: 'wx-marker', iconSize: [58, 26], iconAnchor: [29, 13]
-        });
-        const marker = L.marker([province[2], province[3]], { icon, title: province[1] });
         const box = document.createElement('div');
-        box.className = 'eq-popup';
-        const title = document.createElement('strong');
-        title.className = 'eq-popup-title';
-        title.textContent = province[1];
+        box.className = compact ? '' : 'eq-popup';
+        const title = document.createElement(compact ? 'div' : 'strong');
+        title.className = compact ? 'alert-tip-name' : 'eq-popup-title';
+        title.textContent = provinceName;
         box.appendChild(title);
-        popupRow(box, 'Şu an', `${temp}°C, ${now.text.toLowerCase()}`);
+        popupRow(box, 'Şu an', `${now.icon} ${temp}°C, ${now.text.toLowerCase()}`);
         popupRow(box, 'Rüzgâr', `${Math.round(Number(w.current.wind_speed_10m))} km/sa`);
         const days = (w.daily && w.daily.time) || [];
         days.forEach((iso, i) => {
@@ -506,12 +507,104 @@ document.addEventListener('DOMContentLoaded', () => {
                 `${d.icon} ${Math.round(w.daily.temperature_2m_max[i])}° / ${Math.round(w.daily.temperature_2m_min[i])}°` +
                 (rain != null ? ` · yağış %${rain}` : ''));
         });
-        const note = document.createElement('div');
-        note.className = 'eq-popup-note';
-        note.textContent = 'İl merkezi için tahmin. Kaynak: Open-Meteo.';
-        box.appendChild(note);
-        marker.bindPopup(box, POPUP_OPTS);
-        return marker;
+        if (!compact) {
+            const note = document.createElement('div');
+            note.className = 'eq-popup-note';
+            note.textContent = 'İl merkezi için tahmin. Kaynak: Open-Meteo.';
+            box.appendChild(note);
+        }
+        return box;
+    }
+
+    // Sıcaklık renkleri (°C alt sınırı → renk). Açık tonlar: alttaki harita yazıları okunur kalır.
+    const TEMP_SCALE = [
+        [35, '#f4511e'], [30, '#fb8c00'], [25, '#ffb74d'], [20, '#ffd54f'], [15, '#fff176'],
+        [10, '#dce775'], [5, '#aed581'], [0, '#80cbc4'], [-5, '#81d4fa'], [-10, '#90caf9'], [-100, '#b39ddb']
+    ];
+    function tempColor(t) {
+        const hit = TEMP_SCALE.find((step) => t >= step[0]);
+        return hit ? hit[1] : '#b39ddb';
+    }
+
+    function weatherStyle(temp, hovered) {
+        return { color: hovered ? '#263238' : '#546e7a', weight: hovered ? 2.5 : 0.7, opacity: hovered ? 1 : 0.6,
+            fillColor: tempColor(temp), fillOpacity: 1 };
+    }
+
+    // İl merkezindeki kısa etiket (simge + sıcaklık). Üst üste binenler gizlenir.
+    function weatherLabel(province, w) {
+        const now = wmoInfo(w.current.weather_code);
+        const temp = Math.round(Number(w.current.temperature_2m));
+        const icon = L.divIcon({
+            html: `<div class="wx-label">${now.icon}<b>${temp}°</b></div>`,
+            className: 'wx-marker', iconSize: [54, 22], iconAnchor: [27, 11]
+        });
+        return L.marker([province[2], province[3]], { icon, interactive: false, keyboard: false });
+    }
+
+    let weatherLabels = [];
+    function declutterWeatherLabels() {
+        if (!map.hasLayer(weatherLayer)) return;
+        const placed = [];
+        // Büyük şehirler önce yerleşsin diye plaka sırası yerine sabit öncelik listesi.
+        const priority = [34, 6, 35, 1, 16, 7, 42, 27, 21, 55, 25, 61, 65, 38, 58, 63, 44, 33, 20, 48];
+        const ordered = weatherLabels.slice().sort((x, y) => {
+            const ix = priority.indexOf(x.plate), iy = priority.indexOf(y.plate);
+            return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy);
+        });
+        for (const item of ordered) {
+            const pt = map.latLngToContainerPoint(item.marker.getLatLng());
+            const box = { x1: pt.x - 29, y1: pt.y - 13, x2: pt.x + 29, y2: pt.y + 13 };
+            const clash = placed.some((p) => box.x1 < p.x2 && box.x2 > p.x1 && box.y1 < p.y2 && box.y2 > p.y1);
+            const el = item.marker.getElement();
+            if (el) el.style.visibility = clash ? 'hidden' : 'visible';
+            if (!clash) placed.push(box);
+        }
+    }
+    map.on('zoomend moveend', declutterWeatherLabels);
+
+    async function renderWeather(data, seq) {
+        let shapes = null;
+        try { shapes = await loadProvinceShapes(); } catch (error) { shapes = null; }
+        if (seq !== weatherSeq) return false;
+        weatherLayer.clearLayers();
+        weatherLabels = [];
+        const byPlate = new Map();
+        data.forEach((w, i) => {
+            if (w && w.current && Number.isFinite(Number(w.current.temperature_2m))) byPlate.set(PROVINCES[i][0], w);
+        });
+        if (shapes && Array.isArray(shapes.features)) {
+            weatherLayer.addLayer(L.geoJSON(shapes, {
+                pane: 'shapes', renderer: shapeRenderer,
+                filter: (feature) => byPlate.has(feature.properties.p),
+                style: (feature) => weatherStyle(Number(byPlate.get(feature.properties.p).current.temperature_2m), false),
+                onEachFeature: (feature, layer) => {
+                    const w = byPlate.get(feature.properties.p);
+                    const name = String(feature.properties.n || '');
+                    const temp = Number(w.current.temperature_2m);
+                    layer.bindPopup(weatherBox(name, w, false), POPUP_OPTS);
+                    if (canHover) {
+                        layer.bindTooltip(weatherBox(name, w, true), { sticky: true, direction: 'auto', offset: [14, 0], className: 'alert-tip', opacity: 1 });
+                        layer.on('mouseover', () => { layer.setStyle(weatherStyle(temp, true)); layer.bringToFront(); });
+                        layer.on('mouseout', () => layer.setStyle(weatherStyle(temp, false)));
+                    }
+                }
+            }));
+        }
+        for (const province of PROVINCES) {
+            const w = byPlate.get(province[0]);
+            if (!w) continue;
+            const marker = weatherLabel(province, w);
+            // Sınır dosyası alınamadıysa etiketler tıklanabilir kalır (bilgi kaybolmasın).
+            if (!shapes) {
+                marker.options.interactive = true;
+                marker.bindPopup(weatherBox(province[1], w, false), POPUP_OPTS);
+            }
+            weatherLayer.addLayer(marker);
+            weatherLabels.push({ plate: province[0], marker });
+        }
+        declutterWeatherLabels();
+        return true;
     }
 
     async function loadWeather(force) {
@@ -527,12 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchJson(url, 20000);
             if (seq !== weatherSeq) return;
             if (!Array.isArray(data) || data.length !== PROVINCES.length) throw new Error('bad_format');
-            weatherLayer.clearLayers();
-            data.forEach((w, i) => {
-                if (w && w.current && Number.isFinite(Number(w.current.temperature_2m))) {
-                    weatherLayer.addLayer(weatherMarker(PROVINCES[i], w));
-                }
-            });
+            if (!(await renderWeather(data, seq))) return;
             weatherLoadedAt = Date.now();
             setModeStatus('weather', `81 il merkezi için anlık durum ve 3 günlük tahmin · Kaynak: Open-Meteo · Güncellendi: ${clockNow()}`, false);
         } catch (error) {
@@ -543,9 +631,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- MGM meteorolojik uyarılar ----
     const ALERT_LEVELS = {
-        yellow: { rank: 1, color: '#fdd835', text: '#3e2723', label: 'Sarı uyarı' },
-        orange: { rank: 2, color: '#fb8c00', text: '#ffffff', label: 'Turuncu uyarı' },
-        red: { rank: 3, color: '#d32f2f', text: '#ffffff', label: 'Kırmızı uyarı' }
+        yellow: { rank: 1, color: '#fdd835', fill: '#ffee58', edge: '#f9a825', text: '#3e2723', label: 'Sarı uyarı' },
+        orange: { rank: 2, color: '#fb8c00', fill: '#ff9800', edge: '#e65100', text: '#ffffff', label: 'Turuncu uyarı' },
+        red: { rank: 3, color: '#e53935', fill: '#f44336', edge: '#b71c1c', text: '#ffffff', label: 'Kırmızı uyarı' }
     };
     const HAZARDS = {
         wind: ['💨', 'Kuvvetli rüzgâr / fırtına'], rain: ['🌧️', 'Kuvvetli yağış'], snow: ['❄️', 'Kar'],
@@ -652,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let shapesPromise = null;
     function loadProvinceShapes() {
         if (!shapesPromise) {
-            shapesPromise = fetchJson('data/tr-provinces.json?v=1', 25000).catch((error) => {
+            shapesPromise = fetchJson('data/tr-provinces.json?v=2', 25000).catch((error) => {
                 shapesPromise = null;
                 throw error;
             });
@@ -724,8 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 fillColor: '#ffffff', fillOpacity: hovered ? 0.35 : 0 };
         }
         const lvl = ALERT_LEVELS[entry.level];
-        return { color: hovered ? '#263238' : '#ffffff', weight: hovered ? 2.5 : 1.2, opacity: 1,
-            fillColor: lvl.color, fillOpacity: hovered ? 0.8 : 0.6 };
+        return { color: hovered ? '#263238' : lvl.edge, weight: hovered ? 2.5 : 1, opacity: 1,
+            fillColor: lvl.fill, fillOpacity: 1 };
     }
 
     // Uyarı olan iller, alanları uyarı rengine boyanarak gösterilir. Sınır dosyası alınamazsa
@@ -747,7 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return count;
         }
         const geo = L.geoJSON(shapes, {
-            attribution: 'İl sınırları: geoBoundaries (OpenStreetMap)',
+            pane: 'shapes', renderer: shapeRenderer,
             style: (feature) => provinceStyle(byPlate.get(feature.properties.p), false),
             onEachFeature: (feature, layer) => {
                 const plate = feature.properties.p;
@@ -924,6 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (key === mode) { if (!map.hasLayer(layer)) map.addLayer(layer); }
             else if (map.hasLayer(layer)) map.removeLayer(layer);
         });
+        // Isı haritasının çizim yüzeyi (canvas) haritanın tamamını kaplar; katman kapalıyken haritada
+        // kalırsa il alanlarının üzerine gelmeyi ve tıklamayı engeller. Kapalıyken kaldırılır,
+        // katman yeniden açılınca Leaflet kendisi geri ekler.
+        if (mode !== 'thermal' && map.hasLayer(thermalRenderer)) map.removeLayer(thermalRenderer);
         tabButtons.forEach((btn) => {
             const on = btn.dataset.mode === mode;
             btn.classList.toggle('active', on);
@@ -937,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (remember) writePref('erkenuyar_mapMode', mode);
         MODES[mode].load(false);
+        declutterWeatherLabels();
     }
 
     const savedMinMag = readPref('erkenuyar_minMag');

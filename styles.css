@@ -1109,3 +1109,23 @@ section {
 .alert-card-kinds { font-weight: 700; }
 .alert-card-when { margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary); }
 .alert-card-names { margin-top: 6px; font-size: 0.9rem; line-height: 1.5; }
+
+
+/* Tıklayınca il alanının çevresinde kalan tarayıcı odak çerçevesi (kare) gösterilmez */
+.leaflet-container .leaflet-interactive:focus,
+.leaflet-container path:focus,
+.leaflet-container svg:focus { outline: none !important; }
+
+/* Hava tahmini: il merkezindeki kısa etiket ve renk ölçeği */
+.wx-label {
+    width: 54px; height: 22px; display: flex; align-items: center; justify-content: center; gap: 2px;
+    font-size: 13px; color: #1b1b1b; white-space: nowrap; pointer-events: none;
+    text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 4px #fff, 0 0 6px #fff;
+}
+.wx-label b { font-weight: 800; }
+.temp-scale { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; margin: 0 6px; }
+.temp-scale-bar {
+    display: inline-block; width: 220px; max-width: 50vw; height: 10px; border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: linear-gradient(to right, #b39ddb, #90caf9, #81d4fa, #80cbc4, #aed581, #dce775, #fff176, #ffd54f, #ffb74d, #fb8c00, #f4511e);
+}
