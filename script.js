@@ -103,18 +103,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const RANGE_HOURS = { '8_hours': 8, '1_day': 24, '7_days': 168 };
     const WORKER_RANGE = { '8_hours': 'last_8_hours', '1_day': 'last_24_hours', '7_days': 'last_7_days' };
     const REFRESH_MS = 90 * 1000;
+    const MGM_URL = 'https://mgm-uyari-toplayici.sonerdnrekhesap.workers.dev/raw';
+    const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
+    // [plaka, il, enlem, boylam] (il merkezi)
+    const PROVINCES = [[1,"Adana",37.0,35.3],[2,"Adıyaman",37.8,38.3],[3,"Afyonkarahisar",38.8,30.5],[4,"Ağrı",39.7,43.0],[5,"Amasya",40.7,35.8],[6,"Ankara",39.9,32.9],[7,"Antalya",36.9,30.7],[8,"Artvin",41.2,41.8],[9,"Aydın",37.8,27.8],[10,"Balıkesir",39.6,27.9],[11,"Bilecik",40.1,30.0],[12,"Bingöl",38.9,40.5],[13,"Bitlis",38.4,42.1],[14,"Bolu",40.7,31.6],[15,"Burdur",37.7,30.3],[16,"Bursa",40.2,29.1],[17,"Çanakkale",40.2,26.4],[18,"Çankırı",40.6,33.6],[19,"Çorum",40.5,34.9],[20,"Denizli",37.8,29.1],[21,"Diyarbakır",37.9,40.2],[22,"Edirne",41.7,26.6],[23,"Elazığ",38.7,39.2],[24,"Erzincan",39.8,39.5],[25,"Erzurum",39.9,41.3],[26,"Eskişehir",39.8,30.5],[27,"Gaziantep",37.1,37.4],[28,"Giresun",40.9,38.4],[29,"Gümüşhane",40.5,39.5],[30,"Hakkari",37.6,43.7],[31,"Hatay",36.4,36.2],[32,"Isparta",37.8,30.6],[33,"Mersin",36.8,34.6],[34,"İstanbul",41.0,28.9],[35,"İzmir",38.4,27.1],[36,"Kars",40.6,43.1],[37,"Kastamonu",41.4,33.8],[38,"Kayseri",38.7,35.5],[39,"Kırklareli",41.7,27.2],[40,"Kırşehir",39.1,34.2],[41,"Kocaeli",40.8,29.9],[42,"Konya",37.9,32.5],[43,"Kütahya",39.4,29.9],[44,"Malatya",38.4,38.3],[45,"Manisa",38.6,27.4],[46,"Kahramanmaraş",37.6,36.9],[47,"Mardin",37.3,40.7],[48,"Muğla",37.2,28.4],[49,"Muş",38.7,41.5],[50,"Nevşehir",38.6,34.7],[51,"Niğde",37.9,34.7],[52,"Ordu",40.9,37.9],[53,"Rize",41.0,40.5],[54,"Sakarya",40.8,30.4],[55,"Samsun",41.3,36.3],[56,"Siirt",37.9,41.9],[57,"Sinop",42.0,35.2],[58,"Sivas",39.7,37.0],[59,"Tekirdağ",40.9,27.5],[60,"Tokat",40.3,36.6],[61,"Trabzon",41.0,39.7],[62,"Tunceli",39.1,39.5],[63,"Şanlıurfa",37.2,38.8],[64,"Uşak",38.7,29.4],[65,"Van",38.5,43.4],[66,"Yozgat",39.8,34.8],[67,"Zonguldak",41.5,31.8],[68,"Aksaray",38.4,34.0],[69,"Bayburt",40.3,40.2],[70,"Karaman",37.2,33.2],[71,"Kırıkkale",39.8,33.5],[72,"Batman",37.9,41.1],[73,"Şırnak",37.5,42.5],[74,"Bartın",41.6,32.3],[75,"Ardahan",41.1,42.7],[76,"Iğdır",39.9,44.0],[77,"Yalova",40.7,29.3],[78,"Karabük",41.2,32.6],[79,"Kilis",36.7,37.1],[80,"Osmaniye",37.1,36.2],[81,"Düzce",40.8,31.2]];
+    const POPUP_OPTS = { autoPanPaddingTopLeft: [12, 70], maxWidth: 300 };
 
     const statusEl = document.getElementById('mapStatus');
     const minMagSelect = document.getElementById('minMag');
     const timeRangeSelect = document.getElementById('timeRange');
-    const thermalCheckbox = document.getElementById('showFires');
+    const alertDaySelect = document.getElementById('alertDay');
     const refreshBtn = document.getElementById('refreshMap');
     const locateBtn = document.getElementById('locateMe');
+    const tabButtons = [...document.querySelectorAll('.map-tab[data-mode]')];
+    const modeOnlyEls = [...document.querySelectorAll('[data-mode-only]')];
 
-    function setStatus(text, isError) {
-        if (!statusEl) return;
+    // Her katmanın kendi durum metni vardır; ekranda yalnızca açık olan katmanınki görünür.
+    let activeMode = 'quakes';
+    const statusByMode = {};
+    function setModeStatus(mode, text, isError) {
+        statusByMode[mode] = { text, isError: Boolean(isError) };
+        if (mode !== activeMode || !statusEl) return;
         statusEl.textContent = text;
         statusEl.classList.toggle('map-status-error', Boolean(isError));
+    }
+    function clockNow() {
+        return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     }
 
     function readPref(key) {
@@ -268,12 +282,13 @@ document.addEventListener('DOMContentLoaded', () => {
             hour: '2-digit', minute: '2-digit'
         }) + ' (TSİ)');
         popupRow(box, 'Kaynak', sourceName);
-        marker.bindPopup(box);
+        marker.bindPopup(box, POPUP_OPTS);
         return marker;
     }
 
     // ---- Harita ----
-    const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12 });
+    const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12, zoomControl: false });
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '© <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> katkıcıları'
@@ -290,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
             })
         })
         : L.layerGroup();
-    map.addLayer(quakeLayer);
 
     // ---- Termal harita ----
     // Kaynak: NASA GIBS (anahtar gerektirmeyen açık servis), VIIRS uydularının sıcak noktaları.
@@ -320,7 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { lat: 41.20, lon: 32.65, r: 0.03, name: 'Karabük demir-çelik' },
         { lat: 41.30, lon: 31.40, r: 0.03, name: 'Ereğli demir-çelik' }
     ];
-    const thermalInfoEl = document.getElementById('thermalInfo');
     const thermalRenderer = L.canvas({ padding: 0.5 });
     const thermalLayer = L.layerGroup();
     let thermalSeq = 0;
@@ -422,18 +435,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ? 'Bu bölgede sürekli çalışan tesisler uyduda sıcak görünür.'
             : 'Yangın, anız yakma veya başka bir ısı kaynağı olabilir. Her nokta yangın değildir.';
         box.appendChild(note);
-        marker.bindPopup(box);
+        marker.bindPopup(box, POPUP_OPTS);
         return marker;
     }
 
-    async function loadThermal() {
+    let thermalLoadedAt = 0;
+    async function loadThermal(force) {
+        if (!force && Date.now() - thermalLoadedAt < THERMAL.refreshMs) return;
         const seq = ++thermalSeq;
-        if (thermalInfoEl) thermalInfoEl.textContent = 'Termal veri yükleniyor…';
+        setModeStatus('thermal', 'Isı haritası yükleniyor…', false);
         const days = [{ day: utcDay(1), isToday: false }, { day: utcDay(0), isToday: true }];
         const results = await Promise.allSettled(days.map((d) => loadThermalImage(d.day).then(extractHotspots)));
         if (seq !== thermalSeq) return;
         if (results.every((r) => r.status === 'rejected')) {
-            if (thermalInfoEl) thermalInfoEl.textContent = 'Termal veri şu an alınamıyor.';
+            setModeStatus('thermal', 'Isı haritası verisi şu an alınamıyor.', true);
             return;
         }
         thermalLayer.clearLayers();
@@ -443,22 +458,235 @@ document.addEventListener('DOMContentLoaded', () => {
             r.value.forEach((p) => thermalLayer.addLayer(thermalMarker(p, days[i].day, days[i].isToday)));
             total += r.value.length;
         });
-        if (thermalInfoEl) {
-            thermalInfoEl.textContent = total
-                ? `Son iki günde ${total} sıcak nokta (kaynak: NASA VIIRS uyduları).`
-                : 'Son iki günde sıcak nokta algılanmadı (kaynak: NASA VIIRS uyduları).';
+        thermalLoadedAt = Date.now();
+        setModeStatus('thermal', total
+            ? `Son iki günde ${total} sıcak nokta · Kaynak: NASA VIIRS uyduları · Güncellendi: ${clockNow()}`
+            : `Son iki günde sıcak nokta algılanmadı · Kaynak: NASA VIIRS uyduları · Güncellendi: ${clockNow()}`, false);
+    }
+
+    // ---- Hava tahmini (il merkezleri) ----
+    const WMO = [
+        [[0], '☀️', 'Açık'], [[1], '🌤️', 'Az bulutlu'], [[2], '⛅', 'Parçalı bulutlu'], [[3], '☁️', 'Kapalı'],
+        [[45, 48], '🌫️', 'Sisli'], [[51, 53, 55, 56, 57], '🌦️', 'Çisenti'],
+        [[61, 63, 65, 66, 67], '🌧️', 'Yağmurlu'], [[71, 73, 75, 77], '🌨️', 'Kar yağışlı'],
+        [[80, 81, 82], '🌧️', 'Sağanak yağışlı'], [[85, 86], '🌨️', 'Kar sağanağı'],
+        [[95, 96, 99], '⛈️', 'Gök gürültülü sağanak']
+    ];
+    function wmoInfo(code) {
+        const hit = WMO.find((w) => w[0].includes(Number(code)));
+        return hit ? { icon: hit[1], text: hit[2] } : { icon: '🌡️', text: 'Bilinmiyor' };
+    }
+    const weatherLayer = L.layerGroup();
+    let weatherLoadedAt = 0;
+    let weatherSeq = 0;
+
+    function weatherMarker(province, w) {
+        const now = wmoInfo(w.current.weather_code);
+        const temp = Math.round(Number(w.current.temperature_2m));
+        const icon = L.divIcon({
+            html: `<div class="wx-chip">${now.icon} ${temp}°</div>`,
+            className: 'wx-marker', iconSize: [58, 26], iconAnchor: [29, 13]
+        });
+        const marker = L.marker([province[2], province[3]], { icon, title: province[1] });
+        const box = document.createElement('div');
+        box.className = 'eq-popup';
+        const title = document.createElement('strong');
+        title.className = 'eq-popup-title';
+        title.textContent = province[1];
+        box.appendChild(title);
+        popupRow(box, 'Şu an', `${temp}°C, ${now.text.toLowerCase()}`);
+        popupRow(box, 'Rüzgâr', `${Math.round(Number(w.current.wind_speed_10m))} km/sa`);
+        const days = (w.daily && w.daily.time) || [];
+        days.forEach((iso, i) => {
+            const d = wmoInfo(w.daily.weather_code[i]);
+            const label = i === 0 ? 'Bugün' : i === 1 ? 'Yarın'
+                : new Date(`${iso}T12:00:00`).toLocaleDateString('tr-TR', { weekday: 'long' });
+            const rain = w.daily.precipitation_probability_max ? w.daily.precipitation_probability_max[i] : null;
+            popupRow(box, label,
+                `${d.icon} ${Math.round(w.daily.temperature_2m_max[i])}° / ${Math.round(w.daily.temperature_2m_min[i])}°` +
+                (rain != null ? ` · yağış %${rain}` : ''));
+        });
+        const note = document.createElement('div');
+        note.className = 'eq-popup-note';
+        note.textContent = 'İl merkezi için tahmin. Kaynak: Open-Meteo.';
+        box.appendChild(note);
+        marker.bindPopup(box, POPUP_OPTS);
+        return marker;
+    }
+
+    async function loadWeather(force) {
+        if (!force && Date.now() - weatherLoadedAt < 15 * 60 * 1000) return;
+        const seq = ++weatherSeq;
+        setModeStatus('weather', 'Hava tahmini yükleniyor…', false);
+        const url = `${WEATHER_URL}?latitude=${PROVINCES.map((p) => p[2]).join(',')}` +
+            `&longitude=${PROVINCES.map((p) => p[3]).join(',')}` +
+            '&current=temperature_2m,weather_code,wind_speed_10m' +
+            '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+            '&forecast_days=3&timezone=Europe%2FIstanbul';
+        try {
+            const data = await fetchJson(url, 20000);
+            if (seq !== weatherSeq) return;
+            if (!Array.isArray(data) || data.length !== PROVINCES.length) throw new Error('bad_format');
+            weatherLayer.clearLayers();
+            data.forEach((w, i) => {
+                if (w && w.current && Number.isFinite(Number(w.current.temperature_2m))) {
+                    weatherLayer.addLayer(weatherMarker(PROVINCES[i], w));
+                }
+            });
+            weatherLoadedAt = Date.now();
+            setModeStatus('weather', `81 il merkezi için anlık durum ve 3 günlük tahmin · Kaynak: Open-Meteo · Güncellendi: ${clockNow()}`, false);
+        } catch (error) {
+            if (seq !== weatherSeq) return;
+            setModeStatus('weather', 'Hava tahmini şu an alınamıyor.', true);
         }
     }
 
-    function syncThermal(reload) {
-        const wanted = !thermalCheckbox || thermalCheckbox.checked;
-        if (!wanted) {
-            map.removeLayer(thermalLayer);
-            if (thermalInfoEl) thermalInfoEl.textContent = 'Termal harita kapalı.';
-            return;
+    // ---- MGM meteorolojik uyarılar ----
+    const ALERT_LEVELS = {
+        yellow: { rank: 1, color: '#fdd835', text: '#3e2723', label: 'Sarı uyarı' },
+        orange: { rank: 2, color: '#fb8c00', text: '#ffffff', label: 'Turuncu uyarı' },
+        red: { rank: 3, color: '#d32f2f', text: '#ffffff', label: 'Kırmızı uyarı' }
+    };
+    const HAZARDS = {
+        wind: ['💨', 'Kuvvetli rüzgâr / fırtına'], rain: ['🌧️', 'Kuvvetli yağış'], snow: ['❄️', 'Kar'],
+        thunderstorm: ['⛈️', 'Gök gürültülü sağanak'], fog: ['🌫️', 'Sis'], hot: ['🌡️', 'Aşırı sıcak'],
+        cold: ['🥶', 'Aşırı soğuk'], ice: ['🧊', 'Buzlanma ve don'], frost: ['🧊', 'Zirai don'],
+        avalanche: ['🏔️', 'Çığ'], dust: ['🌪️', 'Toz taşınımı'], flood: ['🌊', 'Sel'], snowmelt: ['💧', 'Kar erimesi']
+    };
+    function hazardInfo(key) {
+        const hit = HAZARDS[String(key).toLowerCase()];
+        return hit ? { icon: hit[0], text: hit[1] } : { icon: '⚠️', text: String(key).slice(0, 40) };
+    }
+    const alertLayer = L.layerGroup();
+    const alertCache = {}; // gün → { at, provinces }
+    let alertSeq = 0;
+
+    // MGM kaydı ilçe kodlarıyla gelir (9PPNN; PP = il plakası). İl bazında en yüksek seviye alınır.
+    function aggregateAlerts(list) {
+        const byPlate = new Map();
+        for (const alert of list) {
+            if (!alert || typeof alert !== 'object') continue;
+            for (const level of Object.keys(ALERT_LEVELS)) {
+                const towns = alert.towns && Array.isArray(alert.towns[level]) ? alert.towns[level] : [];
+                if (!towns.length) continue;
+                const hazards = alert.weather && Array.isArray(alert.weather[level]) ? alert.weather[level] : [];
+                const text = alert.text && typeof alert.text[level] === 'string' ? alert.text[level] : '';
+                const plates = new Set();
+                for (const town of towns) {
+                    const m = /^9(\d{2})\d{2}$/.exec(String(town));
+                    if (m) plates.add(Number(m[1]));
+                }
+                for (const plate of plates) {
+                    if (!byPlate.has(plate)) byPlate.set(plate, { level: null, items: [] });
+                    const entry = byPlate.get(plate);
+                    if (!entry.level || ALERT_LEVELS[level].rank > ALERT_LEVELS[entry.level].rank) entry.level = level;
+                    entry.items.push({ level, hazards, text: text.slice(0, 1200), begin: alert.begin, end: alert.end });
+                }
+            }
         }
-        if (!map.hasLayer(thermalLayer)) map.addLayer(thermalLayer);
-        if (reload || thermalLayer.getLayers().length === 0) loadThermal();
+        return byPlate;
+    }
+
+    function formatRange(begin, end) {
+        const fmt = (iso) => {
+            const ms = Date.parse(iso);
+            return Number.isFinite(ms) ? new Date(ms).toLocaleString('tr-TR', {
+                timeZone: 'Europe/Istanbul', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+            }) : null;
+        };
+        const a = fmt(begin), b = fmt(end);
+        return a && b ? `${a} – ${b} (TSİ)` : null;
+    }
+
+    function alertMarker(province, entry) {
+        const lvl = ALERT_LEVELS[entry.level];
+        const top = entry.items.filter((i) => i.level === entry.level);
+        const iconChar = hazardInfo((top[0] && top[0].hazards[0]) || '').icon;
+        const icon = L.divIcon({
+            html: `<div class="alert-dot" style="background-color:${lvl.color};">${iconChar}</div>`,
+            className: 'alert-marker', iconSize: [38, 38], iconAnchor: [19, 19]
+        });
+        const marker = L.marker([province[2], province[3]], { icon, title: `${province[1]}: ${lvl.label}` });
+        const box = document.createElement('div');
+        box.className = 'eq-popup';
+        const title = document.createElement('strong');
+        title.className = 'eq-popup-title';
+        title.textContent = province[1];
+        box.appendChild(title);
+        const badge = document.createElement('span');
+        badge.className = 'alert-badge';
+        badge.style.backgroundColor = lvl.color;
+        badge.style.color = lvl.text;
+        badge.textContent = lvl.label;
+        box.appendChild(badge);
+        entry.items
+            .slice()
+            .sort((x, y) => ALERT_LEVELS[y.level].rank - ALERT_LEVELS[x.level].rank)
+            .slice(0, 3)
+            .forEach((item) => {
+                const kinds = item.hazards.map((h) => hazardInfo(h).text).join(', ');
+                if (kinds) popupRow(box, ALERT_LEVELS[item.level].label, kinds);
+                const range = formatRange(item.begin, item.end);
+                if (range) popupRow(box, 'Geçerlilik', range);
+                if (item.text) {
+                    const p = document.createElement('div');
+                    p.className = 'alert-text';
+                    p.textContent = item.text;
+                    box.appendChild(p);
+                }
+            });
+        const note = document.createElement('div');
+        note.className = 'eq-popup-note';
+        note.textContent = 'Kaynak: Meteoroloji Genel Müdürlüğü (MGM) MeteoUyarı. Uyarı ilin bir bölümü için geçerli olabilir.';
+        box.appendChild(note);
+        marker.bindPopup(box, POPUP_OPTS);
+        return marker;
+    }
+
+    async function loadAlerts(force) {
+        const day = alertDaySelect && alertDaySelect.value === 'tomorrow' ? 'tomorrow' : 'today';
+        const dayLabel = day === 'today' ? 'bugün' : 'yarın';
+        const seq = ++alertSeq;
+        let cached = alertCache[day];
+        if (force || !cached || Date.now() - cached.at > 10 * 60 * 1000) {
+            setModeStatus('alerts', 'MGM uyarıları yükleniyor…', false);
+            try {
+                const data = await fetchJson(`${MGM_URL}?which=${day}`, 15000);
+                if (seq !== alertSeq) return;
+                if (!data || data.ok !== true || !Array.isArray(data.data)) throw new Error('unavailable');
+                cached = alertCache[day] = { at: Date.now(), provinces: aggregateAlerts(data.data) };
+            } catch (error) {
+                if (seq !== alertSeq) return;
+                // Kaynağa ulaşılamadıysa "uyarı yok" denmez.
+                alertLayer.clearLayers();
+                setModeStatus('alerts', 'MGM uyarılarına şu an ulaşılamıyor. Güncel uyarılar için mgm.gov.tr adresine bakın.', true);
+                return;
+            }
+        }
+        alertLayer.clearLayers();
+        let count = 0;
+        for (const province of PROVINCES) {
+            const entry = cached.provinces.get(province[0]);
+            if (!entry || !entry.level) continue;
+            alertLayer.addLayer(alertMarker(province, entry));
+            count++;
+        }
+        const clock = new Date(cached.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        setModeStatus('alerts', count
+            ? `${count} ilde ${dayLabel} için meteorolojik uyarı var · Kaynak: MGM · Güncellendi: ${clock}`
+            : `MGM'ye göre ${dayLabel} için yürürlükte meteorolojik uyarı yok · Güncellendi: ${clock}`, false);
+        // Bugün uyarı yoksa yarın için yayımlanmış uyarı olup olmadığı da belirtilir.
+        if (!count && day === 'today') {
+            try {
+                const next = await fetchJson(`${MGM_URL}?which=tomorrow`, 15000);
+                if (seq !== alertSeq || !next || next.ok !== true || !Array.isArray(next.data)) return;
+                alertCache.tomorrow = { at: Date.now(), provinces: aggregateAlerts(next.data) };
+                const n = alertCache.tomorrow.provinces.size;
+                if (n) {
+                    setModeStatus('alerts', `MGM'ye göre bugün için yürürlükte uyarı yok; yarın için ${n} ilde uyarı var ("Uyarı günü"nden Yarın'ı seçin) · Güncellendi: ${clock}`, false);
+                }
+            } catch (error) { /* yarın bilgisi alınamadıysa bugünkü durum metni kalır */ }
+        }
     }
 
     // ---- Deprem yükleme ----
@@ -471,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loadController) loadController.abort();
         loadController = new AbortController();
         const seq = ++loadSeq;
-        setStatus('Deprem verisi yükleniyor…', false);
+        setModeStatus('quakes', 'Deprem verisi yükleniyor…', false);
 
         for (const source of SOURCES) {
             try {
@@ -480,8 +708,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const quakes = normalize(source.parse(data)).filter((q) => q.mag >= minMag);
                 quakeLayer.clearLayers();
                 quakes.forEach((q) => quakeLayer.addLayer(createMarker(q, source.name)));
-                const clock = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                setStatus(quakes.length
+                const clock = clockNow();
+                setModeStatus('quakes', quakes.length
                     ? `${quakes.length} deprem gösteriliyor · Kaynak: ${source.name} · Güncellendi: ${clock}`
                     : `Seçilen aralıkta M ${minMag.toFixed(1)} ve üzeri deprem yok · Kaynak: ${source.name} · Güncellendi: ${clock}`, false);
                 return;
@@ -490,10 +718,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         // Hiçbir kaynak yanıt vermedi: eski işaretler kalır, "deprem yok" izlenimi verilmez.
-        setStatus('Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
+        setModeStatus('quakes', 'Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
     }
 
-    // ---- Kontroller ----
+    // ---- Katman düğmeleri ve kontroller ----
+    const MODES = {
+        quakes: { layer: quakeLayer, load: () => loadEarthquakes() },
+        weather: { layer: weatherLayer, load: (force) => loadWeather(force) },
+        alerts: { layer: alertLayer, load: (force) => loadAlerts(force) },
+        thermal: { layer: thermalLayer, load: (force) => loadThermal(force) }
+    };
+
+    function setMode(mode, remember) {
+        if (!MODES[mode]) mode = 'quakes';
+        activeMode = mode;
+        map.closePopup();
+        Object.keys(MODES).forEach((key) => {
+            const layer = MODES[key].layer;
+            if (key === mode) { if (!map.hasLayer(layer)) map.addLayer(layer); }
+            else if (map.hasLayer(layer)) map.removeLayer(layer);
+        });
+        tabButtons.forEach((btn) => {
+            const on = btn.dataset.mode === mode;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        modeOnlyEls.forEach((el) => { el.hidden = !el.dataset.modeOnly.split(' ').includes(mode); });
+        const st = statusByMode[mode];
+        if (statusEl) {
+            statusEl.textContent = st ? st.text : 'Yükleniyor…';
+            statusEl.classList.toggle('map-status-error', Boolean(st && st.isError));
+        }
+        if (remember) writePref('erkenuyar_mapMode', mode);
+        MODES[mode].load(false);
+    }
+
     const savedMinMag = readPref('erkenuyar_minMag');
     if (savedMinMag && minMagSelect && [...minMagSelect.options].some((o) => o.value === savedMinMag)) {
         minMagSelect.value = savedMinMag;
@@ -503,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timeRangeSelect.value = savedRange;
     }
 
+    tabButtons.forEach((btn) => btn.addEventListener('click', () => setMode(btn.dataset.mode, true)));
     if (minMagSelect) minMagSelect.addEventListener('change', () => {
         writePref('erkenuyar_minMag', minMagSelect.value);
         loadEarthquakes();
@@ -511,11 +771,8 @@ document.addEventListener('DOMContentLoaded', () => {
         writePref('erkenuyar_timeRange', timeRangeSelect.value);
         loadEarthquakes();
     });
-    if (thermalCheckbox) thermalCheckbox.addEventListener('change', () => syncThermal(false));
-    if (refreshBtn) refreshBtn.addEventListener('click', () => {
-        syncThermal(true);
-        loadEarthquakes();
-    });
+    if (alertDaySelect) alertDaySelect.addEventListener('change', () => loadAlerts(false));
+    if (refreshBtn) refreshBtn.addEventListener('click', () => MODES[activeMode].load(true));
     // Konum yalnızca kullanıcı düğmeye basınca istenir (sayfa açılır açılmaz izin sorulmaz).
     if (locateBtn) {
         if (!navigator.geolocation) {
@@ -524,17 +781,16 @@ document.addEventListener('DOMContentLoaded', () => {
             locateBtn.addEventListener('click', () => {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 8),
-                    () => setStatus('Konum alınamadı. Tarayıcı konum iznini kontrol edin.', true),
+                    () => setModeStatus(activeMode, 'Konum alınamadı. Tarayıcı konum iznini kontrol edin.', true),
                     { maximumAge: 5 * 60 * 1000, timeout: 10000 }
                 );
             });
         }
     }
 
-    syncThermal(false);
-    loadEarthquakes();
-    setInterval(() => { if (!document.hidden) loadEarthquakes(); }, REFRESH_MS);
-    setInterval(() => { if (!document.hidden) syncThermal(true); }, THERMAL.refreshMs);
+    setMode(readPref('erkenuyar_mapMode') || 'quakes', false);
+    // Açık olan katman kendini yeniler (deprem 90 sn; diğerleri kendi sürelerine göre).
+    setInterval(() => { if (!document.hidden) MODES[activeMode].load(false); }, REFRESH_MS);
     setTimeout(() => map.invalidateSize(), 250);
     window.addEventListener('load', () => map.invalidateSize());
 })();
