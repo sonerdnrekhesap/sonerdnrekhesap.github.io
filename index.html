@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="" />
-    <link rel="stylesheet" href="./styles.css?v=4">
+    <link rel="stylesheet" href="./styles.css?v=5">
 </head>
 <body>
     <!-- Navigation -->
@@ -178,12 +178,13 @@
                     <p class="map-legend" data-mode-only="weather" hidden>
                         Her ilin merkezi için anlık sıcaklık gösterilir. 3 günlük tahmin için ile dokunun.
                     </p>
-                    <p class="map-legend" data-mode-only="alerts" hidden>
-                        <span class="legend-dot legend-a1"></span> Sarı
-                        <span class="legend-dot legend-eq"></span> Turuncu
-                        <span class="legend-dot legend-thermal"></span> Kırmızı.
-                        Meteoroloji Genel Müdürlüğü'nün meteorolojik uyarıları (fırtına, kuvvetli yağış, kar vb.). Uyarı metni için ile dokunun.
+<p class="map-legend" data-mode-only="alerts" hidden>
+                        <span class="legend-swatch legend-a1"></span> Sarı uyarı
+                        <span class="legend-swatch legend-eq"></span> Turuncu uyarı
+                        <span class="legend-swatch legend-thermal"></span> Kırmızı uyarı.
+                        Meteoroloji Genel Müdürlüğü'nün uyarı verdiği iller boyanır. Ayrıntı için ilin üzerine gelin veya dokunun.
                     </p>
+                    <div id="alertSummary" class="alert-summary" data-mode-only="alerts" hidden></div>
                     <p class="map-legend" data-mode-only="thermal" hidden>
                         <span class="legend-dot legend-thermal"></span> Bugünkü sıcak nokta
                         <span class="legend-dot legend-thermal-old"></span> Dünkü sıcak nokta
@@ -341,6 +342,6 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin=""></script>
-    <script src="./script.js?v=4" defer></script>
+    <script src="./script.js?v=5" defer></script>
 </body>
 </html>

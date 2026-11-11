@@ -607,11 +607,17 @@ document.addEventListener('DOMContentLoaded', () => {
             className: 'alert-marker', iconSize: [38, 38], iconAnchor: [19, 19]
         });
         const marker = L.marker([province[2], province[3]], { icon, title: `${province[1]}: ${lvl.label}` });
+        marker.bindPopup(alertPopupBox(province[1], entry), POPUP_OPTS);
+        return marker;
+    }
+
+    function alertPopupBox(provinceName, entry) {
+        const lvl = ALERT_LEVELS[entry.level];
         const box = document.createElement('div');
         box.className = 'eq-popup';
         const title = document.createElement('strong');
         title.className = 'eq-popup-title';
-        title.textContent = province[1];
+        title.textContent = provinceName;
         box.appendChild(title);
         const badge = document.createElement('span');
         badge.className = 'alert-badge';
@@ -639,8 +645,192 @@ document.addEventListener('DOMContentLoaded', () => {
         note.className = 'eq-popup-note';
         note.textContent = 'Kaynak: Meteoroloji Genel Müdürlüğü (MGM) MeteoUyarı. Uyarı ilin bir bölümü için geçerli olabilir.';
         box.appendChild(note);
-        marker.bindPopup(box, POPUP_OPTS);
-        return marker;
+        return box;
+    }
+
+    // İl sınırları (sitede barınan küçültülmüş dosya; yalnızca bu katman açılınca indirilir).
+    let shapesPromise = null;
+    function loadProvinceShapes() {
+        if (!shapesPromise) {
+            shapesPromise = fetchJson('data/tr-provinces.json?v=1', 25000).catch((error) => {
+                shapesPromise = null;
+                throw error;
+            });
+        }
+        return shapesPromise;
+    }
+
+    function hazardSummary(entry) {
+        const kinds = [];
+        entry.items.filter((i) => i.level === entry.level).forEach((item) => {
+            item.hazards.forEach((h) => {
+                const info = hazardInfo(h);
+                if (!kinds.some((k) => k.text === info.text)) kinds.push(info);
+            });
+        });
+        return kinds;
+    }
+
+    // Fareyle üzerine gelince görünen kısa bilgi kutusu.
+    function alertTooltip(provinceName, entry) {
+        const box = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'alert-tip-name';
+        name.textContent = provinceName;
+        box.appendChild(name);
+        if (!entry) {
+            const none = document.createElement('div');
+            none.className = 'alert-tip-none';
+            none.textContent = 'Yürürlükte uyarı yok';
+            box.appendChild(none);
+            return box;
+        }
+        const lvl = ALERT_LEVELS[entry.level];
+        const badge = document.createElement('span');
+        badge.className = 'alert-badge';
+        badge.style.backgroundColor = lvl.color;
+        badge.style.color = lvl.text;
+        badge.textContent = lvl.label;
+        box.appendChild(badge);
+        hazardSummary(entry).forEach((k) => {
+            const row = document.createElement('div');
+            row.className = 'alert-tip-row';
+            row.textContent = `${k.icon} ${k.text}`;
+            box.appendChild(row);
+        });
+        const first = entry.items.find((i) => i.level === entry.level);
+        const range = first ? formatRange(first.begin, first.end) : null;
+        if (range) {
+            const when = document.createElement('div');
+            when.className = 'alert-tip-when';
+            when.textContent = range;
+            box.appendChild(when);
+        }
+        const hint = document.createElement('div');
+        hint.className = 'alert-tip-hint';
+        hint.textContent = 'Uyarı metni için tıklayın';
+        box.appendChild(hint);
+        return box;
+    }
+
+    const canHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+    const shapeLayersByPlate = new Map();
+
+    function provinceStyle(entry, hovered) {
+        if (!entry) {
+            // Uyarısı olmayan iller çizilmez (deniz üzerindeki sınır çizgileri haritayı karıştırmasın);
+            // üzerine gelince hafifçe belirir.
+            return { color: '#546e7a', weight: hovered ? 1.5 : 0, opacity: hovered ? 0.9 : 0,
+                fillColor: '#ffffff', fillOpacity: hovered ? 0.35 : 0 };
+        }
+        const lvl = ALERT_LEVELS[entry.level];
+        return { color: hovered ? '#263238' : '#ffffff', weight: hovered ? 2.5 : 1.2, opacity: 1,
+            fillColor: lvl.color, fillOpacity: hovered ? 0.8 : 0.6 };
+    }
+
+    // Uyarı olan iller, alanları uyarı rengine boyanarak gösterilir. Sınır dosyası alınamazsa
+    // il merkezine işaret konur (bilgi kaybolmasın).
+    async function renderAlerts(byPlate, seq) {
+        let shapes = null;
+        try { shapes = await loadProvinceShapes(); } catch (error) { shapes = null; }
+        if (seq !== alertSeq) return -1;
+        alertLayer.clearLayers();
+        shapeLayersByPlate.clear();
+        let count = 0;
+        if (!shapes || !Array.isArray(shapes.features)) {
+            for (const province of PROVINCES) {
+                const entry = byPlate.get(province[0]);
+                if (!entry || !entry.level) continue;
+                alertLayer.addLayer(alertMarker(province, entry));
+                count++;
+            }
+            return count;
+        }
+        const geo = L.geoJSON(shapes, {
+            attribution: 'İl sınırları: geoBoundaries (OpenStreetMap)',
+            style: (feature) => provinceStyle(byPlate.get(feature.properties.p), false),
+            onEachFeature: (feature, layer) => {
+                const plate = feature.properties.p;
+                const name = String(feature.properties.n || '');
+                const entry = byPlate.get(plate) || null;
+                shapeLayersByPlate.set(plate, layer);
+                if (entry) {
+                    count++;
+                    layer.bindPopup(alertPopupBox(name, entry), POPUP_OPTS);
+                }
+                if (canHover) {
+                    layer.bindTooltip(alertTooltip(name, entry), { sticky: true, direction: 'auto', offset: [14, 0], className: 'alert-tip', opacity: 1 });
+                    layer.on('mouseover', () => { layer.setStyle(provinceStyle(entry, true)); if (entry) layer.bringToFront(); });
+                    layer.on('mouseout', () => layer.setStyle(provinceStyle(entry, false)));
+                }
+            }
+        });
+        // Uyarılı iller üstte çizilsin (kenarlıkları komşu illerin altında kalmasın).
+        geo.eachLayer((layer) => { if (byPlate.get(layer.feature.properties.p)) layer.bringToFront(); });
+        alertLayer.addLayer(geo);
+        geo.eachLayer((layer) => { if (byPlate.get(layer.feature.properties.p)) layer.bringToFront(); });
+        return count;
+    }
+
+    // Haritanın altındaki özet: aynı uyarıyı alan iller tek kartta.
+    const alertSummaryEl = document.getElementById('alertSummary');
+    function renderAlertSummary(byPlate) {
+        if (!alertSummaryEl) return;
+        alertSummaryEl.textContent = '';
+        const groups = new Map();
+        for (const province of PROVINCES) {
+            const entry = byPlate.get(province[0]);
+            if (!entry || !entry.level) continue;
+            const kinds = hazardSummary(entry);
+            const first = entry.items.find((i) => i.level === entry.level);
+            const range = first ? formatRange(first.begin, first.end) : null;
+            const key = `${entry.level}|${kinds.map((k) => k.text).join(',')}|${range || ''}`;
+            if (!groups.has(key)) groups.set(key, { level: entry.level, kinds, range, provinces: [] });
+            groups.get(key).provinces.push(province);
+        }
+        [...groups.values()]
+            .sort((a, b) => ALERT_LEVELS[b.level].rank - ALERT_LEVELS[a.level].rank)
+            .forEach((group) => {
+                const lvl = ALERT_LEVELS[group.level];
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'alert-card';
+                card.style.borderLeftColor = lvl.color;
+                const head = document.createElement('div');
+                head.className = 'alert-card-head';
+                const badge = document.createElement('span');
+                badge.className = 'alert-badge';
+                badge.style.backgroundColor = lvl.color;
+                badge.style.color = lvl.text;
+                badge.textContent = lvl.label;
+                head.appendChild(badge);
+                const kindsEl = document.createElement('span');
+                kindsEl.className = 'alert-card-kinds';
+                kindsEl.textContent = group.kinds.map((k) => `${k.icon} ${k.text}`).join(' · ');
+                head.appendChild(kindsEl);
+                card.appendChild(head);
+                if (group.range) {
+                    const when = document.createElement('div');
+                    when.className = 'alert-card-when';
+                    when.textContent = group.range;
+                    card.appendChild(when);
+                }
+                const names = document.createElement('div');
+                names.className = 'alert-card-names';
+                names.textContent = `${group.provinces.length} il: ${group.provinces.map((p) => p[1]).join(', ')}`;
+                card.appendChild(names);
+                // Karta basınca harita o illere yaklaşır.
+                card.addEventListener('click', () => {
+                    const bounds = L.latLngBounds([]);
+                    group.provinces.forEach((p) => {
+                        const layer = shapeLayersByPlate.get(p[0]);
+                        if (layer && layer.getBounds) bounds.extend(layer.getBounds()); else bounds.extend([p[2], p[3]]);
+                    });
+                    if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 70], maxZoom: 8 });
+                    mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                alertSummaryEl.appendChild(card);
+            });
     }
 
     async function loadAlerts(force) {
@@ -659,18 +849,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (seq !== alertSeq) return;
                 // Kaynağa ulaşılamadıysa "uyarı yok" denmez.
                 alertLayer.clearLayers();
+                if (alertSummaryEl) alertSummaryEl.textContent = '';
                 setModeStatus('alerts', 'MGM uyarılarına şu an ulaşılamıyor. Güncel uyarılar için mgm.gov.tr adresine bakın.', true);
                 return;
             }
         }
-        alertLayer.clearLayers();
-        let count = 0;
-        for (const province of PROVINCES) {
-            const entry = cached.provinces.get(province[0]);
-            if (!entry || !entry.level) continue;
-            alertLayer.addLayer(alertMarker(province, entry));
-            count++;
-        }
+        const count = await renderAlerts(cached.provinces, seq);
+        if (count < 0 || seq !== alertSeq) return;
+        renderAlertSummary(cached.provinces);
         const clock = new Date(cached.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
         setModeStatus('alerts', count
             ? `${count} ilde ${dayLabel} için meteorolojik uyarı var · Kaynak: MGM · Güncellendi: ${clock}`

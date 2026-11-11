@@ -1074,3 +1074,38 @@ section {
     .map-tabs { justify-content: flex-start; top: 10px; left: 10px; right: 10px; }
     .map-tab { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
 }
+
+
+/* Afet uyarıları: il alanları, bilgi kutusu, özet kartları */
+.legend-swatch {
+    display: inline-block; width: 14px; height: 10px; border-radius: 3px;
+    margin: 0 4px 0 10px; vertical-align: middle; border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.leaflet-tooltip.alert-tip {
+    background: #ffffff; color: #1F1F1F; border: none; border-radius: 12px;
+    padding: 10px 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    font-size: 13px; line-height: 1.45; white-space: normal; min-width: 170px; max-width: 260px;
+}
+.leaflet-tooltip.alert-tip::before { display: none; }
+.alert-tip-name { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+.alert-tip-row { font-weight: 600; }
+.alert-tip-when, .alert-tip-none { color: #546e7a; }
+.alert-tip-hint { margin-top: 4px; font-size: 11px; color: #90a4ae; }
+.alert-summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px; margin-top: 14px;
+}
+.alert-card {
+    text-align: left; font: inherit; cursor: pointer; width: 100%;
+    background: var(--bg-white, #fff); color: var(--text-primary);
+    border: none; border-left: 6px solid #fdd835; border-radius: 14px;
+    padding: 12px 14px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+}
+.alert-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); }
+.alert-card:focus-visible { outline: 3px solid rgba(33, 150, 243, 0.5); outline-offset: 2px; }
+.alert-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.alert-card-head .alert-badge { margin: 0; }
+.alert-card-kinds { font-weight: 700; }
+.alert-card-when { margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary); }
+.alert-card-names { margin-top: 6px; font-size: 0.9rem; line-height: 1.5; }
