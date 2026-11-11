@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://*.tile.openstreetmap.org https://gibs.earthdata.nasa.gov https://unpkg.com; connect-src 'self' https://erkenuyar-worker.sonerdnrekhesap.workers.dev https://www.seismicportal.eu https://earthquake.usgs.gov; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="description" content="ErkenUyar - Türkiye Deprem ve Afet Erken Uyarı Sistemi. Deprem, sel, yangın ve diğer afet riskleri hakkında anlık bilgi alın.">
     <title>ErkenUyar - Deprem ve Afet Erken Uyarı Sistemi</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="" />
     <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -25,6 +27,7 @@
                     <li><a href="index.html" class="nav-link active">Ana Sayfa</a></li>
                     <li><a href="privacy.html" class="nav-link">Gizlilik Politikası</a></li>
                     <li><a href="terms.html" class="nav-link">Kullanım Koşulları</a></li>
+                    <li><a href="support.html" class="nav-link">Destek</a></li>
                 </ul>
                 <button class="menu-toggle" id="menuToggle" aria-label="Menu">
                     <span></span>
@@ -49,8 +52,12 @@
                     Erken uyarı sistemi ile güvende kalın.
                 </p>
                 <div class="hero-buttons">
-                    <a href="https://play.google.com/store/apps/details?id=com.erkenuyar" 
-                       class="btn btn-primary" target="_blank" rel="noopener">
+                    <a href="https://apps.apple.com/app/id6760304658"
+                       class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+                        App Store'dan İndir
+                    </a>
+                    <a href="https://play.google.com/store/apps/details?id=com.erkenuyar"
+                       class="btn btn-primary" target="_blank" rel="noopener noreferrer">
                         Google Play'den İndir
                     </a>
                 </div>
@@ -144,10 +151,16 @@
                             </select>
                         </label>
                         <label>
-                            <input type="checkbox" id="showFires" checked> Yangınlar
+                            <input type="checkbox" id="showFires" checked> Termal harita
                         </label>
-                        <button id="refreshMap" type="button" class="btn btn-secondary">Yenile</button>
+                        <button id="locateMe" type="button" class="btn btn-map">Konumum</button>
+                        <button id="refreshMap" type="button" class="btn btn-map">Yenile</button>
                     </div>
+                    <p id="mapStatus" class="map-status" role="status" aria-live="polite">Deprem verisi yükleniyor…</p>
+                    <p class="map-legend">
+                        <span class="legend-dot legend-eq"></span> Depremler (renk büyüklüğe göre)
+                        <span class="legend-dot legend-thermal"></span> Termal harita: uyduların son iki günde algıladığı sıcak noktalar (yangın, anız, sanayi tesisi). Her nokta yangın değildir.
+                    </p>
                     <p class="map-note">
                         Harita bilgilendirme amaçlıdır ve resmî kurum uyarılarının yerine geçmez.
                     </p>
@@ -223,7 +236,7 @@
                         <span class="faq-icon">+</span>
                     </button>
                     <div class="faq-answer" id="faq-answer-7">
-                        <p>Hata bildirimi ve önerileriniz için <a href="mailto:erkenuyardestek@gmail.com">erkenuyardestek@gmail.com</a> adresine e-posta gönderebilirsiniz. Geri bildirimleriniz bizim için değerlidir.</p>
+                        <p>Hata bildirimi ve önerileriniz için <a href="support.html">Destek</a> sayfasına bakabilir veya <a href="mailto:erkenuyardestek@gmail.com">erkenuyardestek@gmail.com</a> adresine e-posta gönderebilirsiniz. Geri bildirimleriniz bizim için değerlidir.</p>
                     </div>
                 </div>
             </div>
@@ -247,7 +260,7 @@
         <div class="container">
             <h2 class="section-title">Hakkında</h2>
             <div class="about-content">
-                <h3>ErkenUyar v8.0.0</h3>
+                <h3>ErkenUyar</h3>
                 <p class="about-subtitle">Türkiye Deprem Erken Uyarı Sistemi</p>
                 <p>
                     ErkenUyar, Türkiye ve çevresindeki sismik hareketleri farklı veri kaynakları aracılığıyla 
@@ -278,7 +291,9 @@
                     <ul>
                         <li><a href="privacy.html">Gizlilik Politikası</a></li>
                         <li><a href="terms.html">Kullanım Koşulları</a></li>
-                        <li><a href="https://play.google.com/store/apps/details?id=com.erkenuyar" target="_blank" rel="noopener">Google Play</a></li>
+                        <li><a href="support.html">Destek</a></li>
+                        <li><a href="https://apps.apple.com/app/id6760304658" target="_blank" rel="noopener noreferrer">App Store</a></li>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.erkenuyar" target="_blank" rel="noopener noreferrer">Google Play</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
@@ -290,13 +305,13 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 ErkenUyar. Tüm hakları saklıdır.</p>
+                <p>&copy; 2026 ErkenUyar. Tüm hakları saklıdır.</p>
             </div>
         </div>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin=""></script>
     <script src="./script.js" defer></script>
 </body>
 </html>
