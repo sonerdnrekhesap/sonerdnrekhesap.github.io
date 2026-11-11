@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org https://gibs.earthdata.nasa.gov; connect-src 'self' https://erkenuyar-worker.sonerdnrekhesap.workers.dev https://mgm-uyari-toplayici.sonerdnrekhesap.workers.dev https://www.seismicportal.eu https://earthquake.usgs.gov https://api.open-meteo.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.tile.openstreetmap.org https://gibs.earthdata.nasa.gov https://tilecache.rainviewer.com https://maps.effis.emergency.copernicus.eu; connect-src 'self' https://erkenuyar-worker.sonerdnrekhesap.workers.dev https://mgm-uyari-toplayici.sonerdnrekhesap.workers.dev https://www.seismicportal.eu https://earthquake.usgs.gov https://api.open-meteo.com https://api.rainviewer.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>ErkenUyar – Canlı Deprem Haritası, Hava Tahmini ve Afet Uyarıları</title>
     <meta name="description" content="Türkiye için canlı deprem haritası, il il hava tahmini, MGM meteorolojik uyarıları ve uydu ısı haritası. ErkenUyar uygulamasını App Store ve Google Play&#x27;den indirin.">
@@ -25,7 +25,7 @@
     <meta name="apple-itunes-app" content="app-id=6760304658">
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"ErkenUyar","alternateName":"ErkenUyar: Acil Uyarı","applicationCategory":"WeatherApplication","operatingSystem":"iOS, Android","inLanguage":"tr","url":"https://erkenuyar.com/","image":"https://erkenuyar.com/img/icon-192.png","description":"Deprem, hava ve afet bilgilerini ve yakınlarınızın güvende olup olmadığını tek yerde gösteren mobil uygulama.","installUrl":["https://apps.apple.com/tr/app/id6760304658","https://play.google.com/store/apps/details?id=com.erkenuyar"],"author":{"@type":"Person","name":"Soner Döner"}}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"ErkenUyar resmî bir kurum uygulaması mı?","acceptedAnswer":{"@type":"Answer","text":"Hayır, ErkenUyar bağımsız bir uygulamadır ve resmî bir kurum uygulaması değildir. Uygulama, resmî kanalların (AFAD, Kandilli Rasathanesi) yerine geçmez. Acil durumlarda mutlaka 112 Acil Çağrı Merkezi'ni arayın ve resmî kurumların açıklamalarını takip edin."}},{"@type":"Question","name":"Bildirimler neden bazen gecikebilir veya gelmeyebilir?","acceptedAnswer":{"@type":"Answer","text":"Bildirimlerin gecikmesi veya gelmemesi birkaç nedenden kaynaklanabilir: ağ gecikmesi, cihaz izinleri, arka plan kısıtları, veri kaynağı gecikmesi veya kullanıcı ayarları. Uyarılar olasılıksal niteliktedir ve her koşulda çalışacağına dair garanti verilemez. Uygulama ayarlarınızı kontrol ederek bildirim izinlerini aktif tutmanız önerilir."}},{"@type":"Question","name":"Konum izni zorunlu mu?","acceptedAnswer":{"@type":"Answer","text":"Konum izni zorunlu değildir ancak uyarıların bölgenize göre özelleşmesi için önerilir. Kullanıcı isterse konum iznini cihaz ayarlarından kapatabilir. Minimum veri prensibi gereği, yalnızca gerekli veriler toplanır."}},{"@type":"Question","name":"Pil tüketimi yapar mı?","acceptedAnswer":{"@type":"Answer","text":"Uygulama hafif ve optimize edilmiştir. Arka planda gereksiz çalışma yapmaz ve pil tüketimi minimum seviyededir. Bildirim tercihlerinizi ayarlayarak pil kullanımını daha da kontrol edebilirsiniz."}},{"@type":"Question","name":"Hangi kaynaklardan veri alıyorsunuz?","acceptedAnswer":{"@type":"Answer","text":"Uygulamada ve kullanım koşullarında belirtilen kamuya açık veri kaynakları kullanılmaktadır. Kaynaklar değişebilir ve doğruluk için çapraz kontrol yapılması önerilir. Resmî ve nihai bilgiler için AFAD ve Kandilli Rasathanesi gibi yetkili kurumların doğrudan yayımladığı açıklamalar esas alınmalıdır."}},{"@type":"Question","name":"Arkadaş takibi nasıl çalışır, gizlilik var mı?","acceptedAnswer":{"@type":"Answer","text":"Arkadaş takibi özelliği kullanıcı onayı ile çalışır. Tüm paylaşımlar kullanıcı kontrolündedir ve istenirse kapatılabilir. Acil durumlarda hızlı durum paylaşımı için tasarlanmıştır. Gizlilik politikamızda detaylı bilgi bulabilirsiniz."}},{"@type":"Question","name":"Hata bildirmek veya öneri iletmek istiyorum, nasıl ulaşırım?","acceptedAnswer":{"@type":"Answer","text":"Hata bildirimi ve önerileriniz için Destek sayfasına bakabilir veya erkenuyardestek@gmail.com adresine e-posta gönderebilirsiniz. Geri bildirimleriniz bizim için değerlidir."}}]}</script>
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
     <!-- Navigation -->
@@ -148,9 +148,11 @@
                     <div class="map-frame">
                         <div class="map-tabs" role="group" aria-label="Harita katmanı">
                             <button type="button" class="map-tab active" data-mode="quakes" aria-pressed="true">🌍 Depremler</button>
-                            <button type="button" class="map-tab" data-mode="weather" aria-pressed="false">🌦️ Hava tahmini</button>
-                            <button type="button" class="map-tab" data-mode="alerts" aria-pressed="false">⚠️ Afet uyarıları</button>
-                            <button type="button" class="map-tab" data-mode="thermal" aria-pressed="false">🔥 Isı haritası</button>
+                            <button type="button" class="map-tab" data-mode="weather" aria-pressed="false">🌦️ Hava</button>
+                            <button type="button" class="map-tab" data-mode="wind" aria-pressed="false">💨 Rüzgâr</button>
+                            <button type="button" class="map-tab" data-mode="rain" aria-pressed="false">🌧️ Yağış</button>
+                            <button type="button" class="map-tab" data-mode="alerts" aria-pressed="false">⚠️ Uyarılar</button>
+                            <button type="button" class="map-tab" data-mode="thermal" aria-pressed="false">🔥 Yangın</button>
                         </div>
                         <div id="map" class="map-canvas" aria-label="ErkenUyar Canlı Harita"></div>
                     </div>
@@ -180,6 +182,9 @@
                                 <option value="tomorrow">Yarın</option>
                             </select>
                         </label>
+                        <label data-mode-only="thermal" hidden>
+                            <input type="checkbox" id="fireDanger" checked> Orman yangını tehlikesi
+                        </label>
                         <button id="locateMe" type="button" class="btn btn-map">Konumum</button>
                         <button id="refreshMap" type="button" class="btn btn-map">Yenile</button>
                     </div>
@@ -188,7 +193,16 @@
                         <span class="legend-dot legend-q2"></span> M 3'ten küçük
                         <span class="legend-dot legend-q3"></span> M 3–4
                         <span class="legend-dot legend-eq"></span> M 4–5
-                        <span class="legend-dot legend-thermal"></span> M 5 ve üzeri. Ayrıntı için depreme dokunun.
+                        <span class="legend-dot legend-thermal"></span> M 5 ve üzeri.
+                        Kandilli, EMSC ve USGS verileri birleştirilir; aynı deprem tek kayıt olarak gösterilir.
+                    </p>
+                    <div id="quakeList" class="quake-list" data-mode-only="quakes" aria-label="Son depremler"></div>
+                    <p class="map-legend" data-mode-only="wind" hidden>
+                        <span class="temp-scale">0<span class="temp-scale-bar wind-scale-bar"></span>85+ km/sa</span>
+                        Akan çizgiler rüzgârın yönünü, zemin rengi hızını gösterir. Bir noktadaki değer için haritaya dokunun.
+                    </p>
+                    <p class="map-legend" data-mode-only="rain" hidden>
+                        Meteoroloji radarlarının son yağış görüntüsü. Renk koyulaştıkça yağış şiddetlenir; radar kapsamı dışındaki bölgeler boş görünür.
                     </p>
 <p class="map-legend" data-mode-only="weather" hidden>
                         <span class="temp-scale">−10°<span class="temp-scale-bar"></span>35°</span>
@@ -206,6 +220,15 @@
                         <span class="legend-dot legend-thermal-old"></span> Dünkü sıcak nokta
                         <span class="legend-dot legend-industrial"></span> Sanayi kaynağı.
                         Sıcak noktalar yangın, anız yakma veya sanayi tesisi olabilir; her nokta yangın değildir.
+                    </p>
+                    <p class="map-legend" data-mode-only="thermal" hidden>
+                        Orman yangını tehlikesi (bugün):
+                        <span class="legend-swatch fwi-1"></span> Düşük
+                        <span class="legend-swatch fwi-2"></span> Orta
+                        <span class="legend-swatch fwi-3"></span> Yüksek
+                        <span class="legend-swatch fwi-4"></span> Çok yüksek
+                        <span class="legend-swatch fwi-5"></span> Aşırı.
+                        Hava koşullarına göre yangın çıkma ve yayılma riskidir; yangın olduğu anlamına gelmez. Kaynak: EFFIS (Copernicus).
                     </p>
                     <p class="map-note">
                         Harita bilgilendirme amaçlıdır ve resmî kurum uyarılarının yerine geçmez.
@@ -355,6 +378,6 @@
             </div>
         </div>
     </footer>
-    <script src="site.js?v=7" defer></script>
+    <script src="site.js?v=8" defer></script>
 </body>
 </html>

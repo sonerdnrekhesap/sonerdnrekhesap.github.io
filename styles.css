@@ -1137,3 +1137,28 @@ section {
     background: rgba(31, 31, 31, 0.82); color: #fff; padding: 8px 14px; border-radius: 999px;
     font-size: 0.85rem; pointer-events: none; white-space: nowrap;
 }
+
+
+/* Rüzgâr ölçeği, yangın tehlikesi renkleri, deprem kaynak tablosu ve son depremler listesi */
+.wind-scale-bar { background: linear-gradient(to right, #8cbeeb 0%, #50aaeb 12%, #3cbe96 24%, #b9d246 35%, #fabe32 47%, #fa8c28 59%, #e64646 76%, #a050be 100%); }
+.fwi-1 { background: #9cffc0; } .fwi-2 { background: #cde24e; } .fwi-3 { background: #e6ac00; }
+.fwi-4 { background: #d97010; } .fwi-5 { background: #b71c1c; }
+.eq-src-head { margin-top: 8px; font-weight: 700; font-size: 0.9em; color: #37474f; }
+.eq-src-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 0.86em; }
+.eq-src-table td { padding: 3px 6px 3px 0; border-top: 1px solid #eceff1; white-space: nowrap; }
+.eq-src-table td.eq-src-name { white-space: normal; font-weight: 600; }
+.quake-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin-top: 14px; }
+.quake-row {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; cursor: pointer;
+    background: var(--bg-white, #fff); color: var(--text-primary); border: none; border-radius: 14px;
+    padding: 10px 14px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); transition: var(--transition);
+}
+.quake-row:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14); }
+.quake-row:focus-visible { outline: 3px solid rgba(33, 150, 243, 0.5); outline-offset: 2px; }
+.quake-mag {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.quake-body { display: flex; flex-direction: column; min-width: 0; }
+.quake-place { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quake-meta { font-size: 0.82rem; color: var(--text-secondary); }

@@ -58,7 +58,7 @@
     // Deprem kaynakları, sırayla denenir. İlk yanıt veren kullanılır.
     const SOURCES = [
         {
-            name: 'Kandilli Rasathanesi (KOERI)',
+            name: 'Kandilli Rasathanesi (KOERI)', short: 'KOERI',
             timeoutMs: 6000,
             url: (range, minMag) =>
                 'https://erkenuyar-worker.sonerdnrekhesap.workers.dev/api/earthquakes/tr/recent' +
@@ -74,7 +74,7 @@
             }
         },
         {
-            name: 'EMSC',
+            name: 'EMSC', short: 'EMSC',
             timeoutMs: 12000,
             url: (range, minMag) =>
                 'https://www.seismicportal.eu/fdsnws/event/1/query?format=json&limit=500' +
@@ -85,12 +85,12 @@
                 return data.features.map((f) => {
                     const p = f.properties || {};
                     return { id: f.id, lat: p.lat, lon: p.lon, mag: p.mag, depth: p.depth,
-                        place: p.flynn_region, time: p.time, magType: p.magtype };
+                        place: p.flynn_region, time: p.time, magType: p.magtype, agency: p.auth };
                 });
             }
         },
         {
-            name: 'USGS',
+            name: 'USGS', short: 'USGS',
             timeoutMs: 12000,
             url: (range, minMag) =>
                 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson' +
@@ -118,7 +118,8 @@
                 depth: Math.abs(Number(raw.depth)),
                 place: typeof raw.place === 'string' ? raw.place.slice(0, 120) : '',
                 timeMs: typeof raw.time === 'number' ? raw.time : Date.parse(raw.time),
-                magType: typeof raw.magType === 'string' ? raw.magType.slice(0, 4) : ''
+                magType: typeof raw.magType === 'string' ? raw.magType.slice(0, 4) : '',
+                agency: typeof raw.agency === 'string' ? raw.agency.replace(/[^A-Za-z0-9]/g, '').slice(0, 10) : ''
             };
             if (!Number.isFinite(eq.lat) || !Number.isFinite(eq.lon) || !Number.isFinite(eq.mag)) continue;
             if (!Number.isFinite(eq.timeMs) || eq.timeMs > Date.now() + 5 * 60 * 1000) continue;
@@ -168,7 +169,69 @@
         parent.appendChild(row);
     }
 
-    function createMarker(eq, sourceName) {
+    function sourceLabel(reading) {
+        if (reading.source === 'EMSC' && reading.agency && reading.agency.toUpperCase() !== 'EMSC') {
+            return `${reading.agency.toUpperCase()} (EMSC üzerinden)`;
+        }
+        return reading.sourceName;
+    }
+
+    function trTime(ms, withDate) {
+        return new Date(ms).toLocaleString('tr-TR', Object.assign({ timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' },
+            withDate ? { year: 'numeric', month: '2-digit', day: '2-digit' } : { second: '2-digit' }));
+    }
+
+    function quakePopup(event) {
+        const eq = event.primary;
+        const color = magnitudeColor(eq.mag);
+        const box = document.createElement('div');
+        box.className = 'eq-popup';
+        const title = document.createElement('strong');
+        title.className = 'eq-popup-title';
+        title.style.color = color;
+        title.textContent = `${eq.magType ? eq.magType.toUpperCase() : 'M'} ${eq.mag.toFixed(1)}`;
+        box.appendChild(title);
+        const place = event.readings.map((r) => r.place).find(Boolean);
+        if (place) popupRow(box, 'Konum', place);
+        if (Number.isFinite(eq.depth)) popupRow(box, 'Derinlik', `${eq.depth.toFixed(1)} km`);
+        popupRow(box, 'Zaman', `${trTime(eq.timeMs, true)} (TSİ)`);
+
+        // Aynı depremi bildiren kaynakların ölçümleri yan yana.
+        const head = document.createElement('div');
+        head.className = 'eq-src-head';
+        head.textContent = event.readings.length > 1
+            ? `Kaynaklara göre (${event.readings.length} kaynak)` : 'Kaynak';
+        box.appendChild(head);
+        const table = document.createElement('table');
+        table.className = 'eq-src-table';
+        event.readings.forEach((r) => {
+            const tr = document.createElement('tr');
+            const cells = [
+                sourceLabel(r),
+                `${r.magType ? r.magType.toUpperCase() : 'M'} ${r.mag.toFixed(1)}`,
+                Number.isFinite(r.depth) ? `${r.depth.toFixed(0)} km` : '–',
+                trTime(r.timeMs, false)
+            ];
+            cells.forEach((text, i) => {
+                const td = document.createElement('td');
+                td.textContent = text;
+                if (i === 0) td.className = 'eq-src-name';
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+        box.appendChild(table);
+        if (event.readings.length > 1) {
+            const note = document.createElement('div');
+            note.className = 'eq-popup-note';
+            note.textContent = 'Kurumlar aynı depremi farklı yöntemle ölçer; büyüklük ve saat küçük farklar gösterebilir.';
+            box.appendChild(note);
+        }
+        return box;
+    }
+
+    function createMarker(event) {
+        const eq = event.primary;
         const color = magnitudeColor(eq.mag);
         const magText = eq.mag.toFixed(1);
         const size = 32;
@@ -179,22 +242,7 @@
             iconAnchor: [size / 2, size / 2]
         });
         const marker = L.marker([eq.lat, eq.lon], { icon, title: `M ${magText}` });
-
-        const box = document.createElement('div');
-        box.className = 'eq-popup';
-        const title = document.createElement('strong');
-        title.className = 'eq-popup-title';
-        title.style.color = color;
-        title.textContent = `${eq.magType ? eq.magType.toUpperCase() : 'M'} ${magText}`;
-        box.appendChild(title);
-        if (eq.place) popupRow(box, 'Konum', eq.place);
-        if (Number.isFinite(eq.depth)) popupRow(box, 'Derinlik', `${eq.depth.toFixed(1)} km`);
-        popupRow(box, 'Zaman', new Date(eq.timeMs).toLocaleString('tr-TR', {
-            timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-        }) + ' (TSİ)');
-        popupRow(box, 'Kaynak', sourceName);
-        marker.bindPopup(box, POPUP_OPTS);
+        marker.bindPopup(quakePopup(event), POPUP_OPTS);
         return marker;
     }
 
@@ -892,36 +940,423 @@
         }
     }
 
+    // ---- Rüzgâr haritası (hareketli) ----
+    // Veri: Open-Meteo, 1°'lik ızgarada anlık rüzgâr hızı ve yönü. Izgara aralarında doğrusal ara
+    // değer alınır; parçacıklar rüzgâr yönünde akar, zemin rüzgâr hızına göre renklenir.
+    const WIND = { minLat: 34, maxLat: 44, minLon: 24, maxLon: 46, step: 1, refreshMs: 30 * 60 * 1000 };
+    WIND.rows = (WIND.maxLat - WIND.minLat) / WIND.step + 1;
+    WIND.cols = (WIND.maxLon - WIND.minLon) / WIND.step + 1;
+    // km/sa → renk (açık tonlar; zemin haritayla çarpılarak boyanır, yazılar okunur kalır)
+    const WIND_SCALE = [
+        [0, [140, 190, 235]], [10, [80, 170, 235]], [20, [60, 190, 150]], [30, [185, 210, 70]],
+        [40, [250, 190, 50]], [50, [250, 140, 40]], [65, [230, 70, 70]], [85, [160, 80, 190]]
+    ];
+    function windColor(speed) {
+        for (let i = WIND_SCALE.length - 1; i > 0; i--) {
+            const [s0, c0] = WIND_SCALE[i - 1], [s1, c1] = WIND_SCALE[i];
+            if (speed >= s0) {
+                const t = Math.min(1, (speed - s0) / (s1 - s0));
+                return [0, 1, 2].map((k) => Math.round(c0[k] + (c1[k] - c0[k]) * t));
+            }
+        }
+        return WIND_SCALE[0][1];
+    }
+    const COMPASS = ['kuzeyden', 'kuzeydoğudan', 'doğudan', 'güneydoğudan', 'güneyden', 'güneybatıdan', 'batıdan', 'kuzeybatıdan'];
+
+    const windBgPane = map.createPane('windbg');
+    windBgPane.style.zIndex = 345;
+    windBgPane.style.mixBlendMode = 'multiply';
+    windBgPane.style.pointerEvents = 'none';
+    const windPane = map.createPane('wind');
+    windPane.style.zIndex = 360;
+    windPane.style.pointerEvents = 'none';
+    const windBgCanvas = L.DomUtil.create('canvas', 'leaflet-zoom-hide', windBgPane);
+    const windCanvas = L.DomUtil.create('canvas', 'leaflet-zoom-hide', windPane);
+    const windCtx = windCanvas.getContext('2d');
+    windBgPane.style.display = 'none';
+    windPane.style.display = 'none';
+    const windLayer = L.layerGroup(); // katman düğmeleri için yer tutucu
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let windField = null; // { u, v, gust } Float32Array (rows × cols), km/sa
+    let windLoadedAt = 0;
+    let windSeq = 0;
+    let windParticles = [];
+    let windFrame = null;
+    let windRunning = false;
+
+    function windAt(lat, lon) {
+        if (!windField) return null;
+        const y = (lat - WIND.minLat) / WIND.step, x = (lon - WIND.minLon) / WIND.step;
+        if (x < 0 || y < 0 || x > WIND.cols - 1 || y > WIND.rows - 1) return null;
+        const x0 = Math.min(WIND.cols - 2, Math.floor(x)), y0 = Math.min(WIND.rows - 2, Math.floor(y));
+        const fx = x - x0, fy = y - y0;
+        const at = (arr, r, c) => arr[r * WIND.cols + c];
+        const mix = (arr) => at(arr, y0, x0) * (1 - fx) * (1 - fy) + at(arr, y0, x0 + 1) * fx * (1 - fy) +
+            at(arr, y0 + 1, x0) * (1 - fx) * fy + at(arr, y0 + 1, x0 + 1) * fx * fy;
+        const u = mix(windField.u), v = mix(windField.v);
+        return { u, v, speed: Math.hypot(u, v), gust: mix(windField.gust) };
+    }
+
+    function sizeWindCanvases() {
+        const size = map.getSize();
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const topLeft = map.containerPointToLayerPoint([0, 0]);
+        [windCanvas, windBgCanvas].forEach((canvas) => {
+            L.DomUtil.setPosition(canvas, topLeft);
+            canvas.style.width = `${size.x}px`;
+            canvas.style.height = `${size.y}px`;
+        });
+        windCanvas.width = Math.round(size.x * ratio);
+        windCanvas.height = Math.round(size.y * ratio);
+        windCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return size;
+    }
+
+    // Zemin: düşük çözünürlükte hesaplanıp yumuşatılarak büyütülür.
+    function drawWindBackground(size) {
+        const cell = 8;
+        const w = Math.ceil(size.x / cell), h = Math.ceil(size.y / cell);
+        const small = document.createElement('canvas');
+        small.width = w; small.height = h;
+        const sctx = small.getContext('2d');
+        const image = sctx.createImageData(w, h);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const ll = map.containerPointToLatLng([x * cell + cell / 2, y * cell + cell / 2]);
+                const wind = windAt(ll.lat, ll.lng);
+                const i = (y * w + x) * 4;
+                if (!wind) { image.data[i + 3] = 0; continue; }
+                const c = windColor(wind.speed);
+                image.data[i] = c[0]; image.data[i + 1] = c[1]; image.data[i + 2] = c[2]; image.data[i + 3] = 235;
+            }
+        }
+        sctx.putImageData(image, 0, 0);
+        windBgCanvas.width = size.x; windBgCanvas.height = size.y;
+        const ctx = windBgCanvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.clearRect(0, 0, size.x, size.y);
+        ctx.drawImage(small, 0, 0, w, h, 0, 0, size.x, size.y);
+    }
+
+    function spawnParticle(size) {
+        return { x: Math.random() * size.x, y: Math.random() * size.y, age: Math.floor(Math.random() * 60), life: 60 + Math.random() * 60 };
+    }
+
+    function resetWind() {
+        if (!windField) return;
+        const size = sizeWindCanvases();
+        drawWindBackground(size);
+        windCtx.clearRect(0, 0, size.x, size.y);
+        const count = Math.round(Math.min(1400, Math.max(300, size.x * size.y / 520)));
+        windParticles = Array.from({ length: count }, () => spawnParticle(size));
+        if (reducedMotion) drawWindArrows(size);
+    }
+
+    // Hareket azaltma tercihi olanlar için: akan parçacık yerine sabit oklar.
+    function drawWindArrows(size) {
+        windCtx.strokeStyle = 'rgba(38, 50, 56, 0.8)';
+        windCtx.lineWidth = 1.4;
+        for (let y = 30; y < size.y; y += 46) {
+            for (let x = 30; x < size.x; x += 46) {
+                const ll = map.containerPointToLatLng([x, y]);
+                const wind = windAt(ll.lat, ll.lng);
+                if (!wind || wind.speed < 1) continue;
+                const len = Math.min(18, 6 + wind.speed / 4);
+                const ax = wind.u / wind.speed, ay = -wind.v / wind.speed;
+                windCtx.beginPath();
+                windCtx.moveTo(x - ax * len, y - ay * len);
+                windCtx.lineTo(x + ax * len, y + ay * len);
+                windCtx.lineTo(x + ax * len - (ax * 5 - ay * 4), y + ay * len - (ay * 5 + ax * 4));
+                windCtx.moveTo(x + ax * len, y + ay * len);
+                windCtx.lineTo(x + ax * len - (ax * 5 + ay * 4), y + ay * len - (ay * 5 - ax * 4));
+                windCtx.stroke();
+            }
+        }
+    }
+
+    function stepWind() {
+        windFrame = null;
+        if (!windRunning || !windField) return;
+        const size = map.getSize();
+        // Önceki kareyi soldur: izler kuyruk bırakır.
+        windCtx.globalCompositeOperation = 'destination-in';
+        windCtx.fillStyle = 'rgba(0, 0, 0, 0.93)';
+        windCtx.fillRect(0, 0, size.x, size.y);
+        windCtx.globalCompositeOperation = 'source-over';
+        windCtx.lineWidth = 1.7;
+        windCtx.lineCap = 'round';
+        windCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        windCtx.beginPath();
+        const pxPerKmh = 0.055 * Math.pow(1.35, map.getZoom() - 6); // yaklaşınca akış da hızlanır
+        for (const p of windParticles) {
+            const ll = map.containerPointToLatLng([p.x, p.y]);
+            const wind = windAt(ll.lat, ll.lng);
+            if (!wind || wind.speed < 0.8 || p.age > p.life || p.x < 0 || p.y < 0 || p.x > size.x || p.y > size.y) {
+                Object.assign(p, spawnParticle(size), { age: 0 });
+                continue;
+            }
+            const nx = p.x + wind.u * pxPerKmh, ny = p.y - wind.v * pxPerKmh;
+            windCtx.moveTo(p.x, p.y);
+            windCtx.lineTo(nx, ny);
+            p.x = nx; p.y = ny; p.age++;
+        }
+        windCtx.stroke();
+        // Beyaz izlerin açık zeminde de seçilmesi için ince koyu gölge.
+        windCtx.globalCompositeOperation = 'destination-over';
+        windCtx.strokeStyle = 'rgba(20, 40, 60, 0.35)';
+        windCtx.lineWidth = 3.2;
+        windCtx.stroke();
+        windCtx.globalCompositeOperation = 'source-over';
+        windFrame = requestAnimationFrame(stepWind);
+    }
+
+    function windStart() {
+        windBgPane.style.display = '';
+        windPane.style.display = '';
+        if (!windField) return;
+        resetWind();
+        windRunning = !reducedMotion;
+        if (windRunning && !windFrame) windFrame = requestAnimationFrame(stepWind);
+    }
+    function windStop(hide) {
+        windRunning = false;
+        if (windFrame) { cancelAnimationFrame(windFrame); windFrame = null; }
+        if (hide) { windBgPane.style.display = 'none'; windPane.style.display = 'none'; }
+    }
+    map.on('moveend zoomend resize', () => { if (activeMode === 'wind' && windField) resetWind(); });
+    document.addEventListener('visibilitychange', () => {
+        if (activeMode !== 'wind') return;
+        if (document.hidden) windStop(false); else windStart();
+    });
+    map.on('click', (e) => {
+        if (activeMode !== 'wind') return;
+        const wind = windAt(e.latlng.lat, e.latlng.lng);
+        if (!wind) return;
+        const from = (Math.atan2(-wind.u, -wind.v) * 180 / Math.PI + 360) % 360; // rüzgârın geldiği yön
+        const box = document.createElement('div');
+        box.className = 'eq-popup';
+        const title = document.createElement('strong');
+        title.className = 'eq-popup-title';
+        title.textContent = `Rüzgâr: ${Math.round(wind.speed)} km/sa`;
+        box.appendChild(title);
+        popupRow(box, 'Yön', `${COMPASS[Math.round(from / 45) % 8]} (${Math.round(from)}°)`);
+        popupRow(box, 'Hamle', `${Math.round(wind.gust)} km/sa`);
+        const note = document.createElement('div');
+        note.className = 'eq-popup-note';
+        note.textContent = 'Yerden 10 m yükseklik için model tahmini. Kaynak: Open-Meteo.';
+        box.appendChild(note);
+        L.popup(POPUP_OPTS).setLatLng(e.latlng).setContent(box).openOn(map);
+    });
+
+    async function loadWind(force) {
+        if (!force && windField && Date.now() - windLoadedAt < WIND.refreshMs) { if (activeMode === 'wind') windStart(); return; }
+        const seq = ++windSeq;
+        if (!windField) setModeStatus('wind', 'Rüzgâr verisi yükleniyor…', false);
+        const lats = [], lons = [];
+        for (let r = 0; r < WIND.rows; r++) {
+            for (let c = 0; c < WIND.cols; c++) { lats.push(WIND.minLat + r * WIND.step); lons.push(WIND.minLon + c * WIND.step); }
+        }
+        try {
+            const data = await fetchJson(`${WEATHER_URL}?latitude=${lats.join(',')}&longitude=${lons.join(',')}` +
+                '&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh', 25000);
+            if (seq !== windSeq) return;
+            if (!Array.isArray(data) || data.length !== lats.length) throw new Error('bad_format');
+            const field = { u: new Float32Array(data.length), v: new Float32Array(data.length), gust: new Float32Array(data.length) };
+            let max = 0, maxAt = 0;
+            data.forEach((d, i) => {
+                const speed = Number(d && d.current && d.current.wind_speed_10m) || 0;
+                const dir = (Number(d && d.current && d.current.wind_direction_10m) || 0) * Math.PI / 180;
+                field.u[i] = -speed * Math.sin(dir);
+                field.v[i] = -speed * Math.cos(dir);
+                field.gust[i] = Number(d && d.current && d.current.wind_gusts_10m) || speed;
+                if (speed > max) { max = speed; maxAt = i; }
+            });
+            windField = field;
+            windLoadedAt = Date.now();
+            setModeStatus('wind', `Anlık rüzgâr · bölgede en yüksek ${Math.round(max)} km/sa · Kaynak: Open-Meteo · Güncellendi: ${clockNow()}`, false);
+            if (activeMode === 'wind') windStart();
+        } catch (error) {
+            if (seq !== windSeq) return;
+            if (!windField) setModeStatus('wind', 'Rüzgâr verisi şu an alınamıyor.', true);
+        }
+    }
+
+    // ---- Yağış radarı ----
+    const rainLayer = L.layerGroup();
+    let rainLoadedAt = 0;
+    let rainSeq = 0;
+    async function loadRain(force) {
+        if (!force && Date.now() - rainLoadedAt < 5 * 60 * 1000) return;
+        const seq = ++rainSeq;
+        if (!rainLoadedAt) setModeStatus('rain', 'Yağış radarı yükleniyor…', false);
+        try {
+            const data = await fetchJson('https://api.rainviewer.com/public/weather-maps.json', 15000);
+            if (seq !== rainSeq) return;
+            const frames = data && data.radar && Array.isArray(data.radar.past) ? data.radar.past : [];
+            const last = frames[frames.length - 1];
+            if (!last || data.host !== 'https://tilecache.rainviewer.com' || !/^\/v2\/radar\/[A-Za-z0-9_]+$/.test(String(last.path))) throw new Error('bad_format');
+            rainLayer.clearLayers();
+            rainLayer.addLayer(L.tileLayer(`${data.host}${last.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+                opacity: 0.75, maxNativeZoom: 7, attribution: 'Yağış radarı: RainViewer'
+            }));
+            rainLoadedAt = Date.now();
+            const at = new Date(last.time * 1000).toLocaleTimeString('tr-TR', { timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit' });
+            setModeStatus('rain', `Yağış radarı · son görüntü ${at} (TSİ) · Kaynak: RainViewer`, false);
+        } catch (error) {
+            if (seq !== rainSeq) return;
+            if (!rainLoadedAt) setModeStatus('rain', 'Yağış radarı şu an alınamıyor.', true);
+        }
+    }
+
+    // ---- Orman yangını tehlikesi (EFFIS / Copernicus) ----
+    // Avrupa Orman Yangını Bilgi Sistemi'nin günlük yangın hava indeksi (FWI) tahmini; anahtar gerektirmez.
+    const fireDangerToggle = document.getElementById('fireDanger');
+    const fireGroup = L.layerGroup([thermalLayer]);
+    let fireDangerLayer = null;
+    function syncFireDanger() {
+        const wanted = !fireDangerToggle || fireDangerToggle.checked;
+        if (wanted && !fireDangerLayer) {
+            fireDangerLayer = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
+                layers: 'mf010.fwi', format: 'image/png', transparent: true, version: '1.1.1',
+                time: new Date().toISOString().slice(0, 10), pane: 'shapes', opacity: 0.6,
+                attribution: 'Yangın tehlikesi: EFFIS (Copernicus)'
+            });
+            fireGroup.addLayer(fireDangerLayer);
+        } else if (!wanted && fireDangerLayer) {
+            fireGroup.removeLayer(fireDangerLayer);
+            fireDangerLayer = null;
+        }
+    }
+    if (fireDangerToggle) fireDangerToggle.addEventListener('change', syncFireDanger);
+    syncFireDanger();
+
     // ---- Deprem yükleme ----
     let loadController = null;
     let loadSeq = 0;
+    const quakeListEl = document.getElementById('quakeList');
+
+    function distanceKm(a, b) {
+        const rad = Math.PI / 180;
+        const dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+        return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+
+    // Farklı kaynakların bildirdiği aynı deprem tek kayıt olur (uygulamadaki kuralla aynı):
+    // zaman farkı ≤ 60 sn, uzaklık ≤ 75 km, büyüklük farkı ≤ 1,5. Kaynak önceliği listedeki sıradır;
+    // gösterilen değerler önceliği en yüksek kaynağınkidir.
+    const MATCH = { seconds: 60, km: 75, magnitude: 1.5 };
+    function mergeQuakes(listsInPriorityOrder) {
+        const events = [];
+        for (const list of listsInPriorityOrder) {
+            for (const q of list) {
+                let best = null, bestDt = Infinity;
+                for (const ev of events) {
+                    if (ev.readings.some((r) => r.source === q.source)) continue; // aynı kaynaktan iki kayıt birleşmez
+                    const dt = Math.abs(ev.primary.timeMs - q.timeMs);
+                    if (dt > MATCH.seconds * 1000 || dt >= bestDt) continue;
+                    if (Math.abs(ev.primary.mag - q.mag) > MATCH.magnitude) continue;
+                    if (distanceKm(ev.primary, q) > MATCH.km) continue;
+                    best = ev; bestDt = dt;
+                }
+                if (best) best.readings.push(q);
+                else events.push({ primary: q, readings: [q] });
+            }
+        }
+        return events.sort((a, b) => b.primary.timeMs - a.primary.timeMs);
+    }
+
+    function relativeTime(ms) {
+        const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
+        if (min < 1) return 'az önce';
+        if (min < 60) return `${min} dk önce`;
+        const h = Math.floor(min / 60);
+        if (h < 24) return `${h} sa ${min % 60} dk önce`;
+        return `${Math.floor(h / 24)} gün önce`;
+    }
+
+    function renderQuakeList(events, markers) {
+        if (!quakeListEl) return;
+        quakeListEl.textContent = '';
+        events.slice(0, 10).forEach((event, i) => {
+            const eq = event.primary;
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'quake-row';
+            const mag = document.createElement('span');
+            mag.className = 'quake-mag';
+            mag.style.backgroundColor = magnitudeColor(eq.mag);
+            mag.textContent = eq.mag.toFixed(1);
+            row.appendChild(mag);
+            const body = document.createElement('span');
+            body.className = 'quake-body';
+            const place = document.createElement('span');
+            place.className = 'quake-place';
+            place.textContent = event.readings.map((r) => r.place).find(Boolean) || 'Konum bilgisi yok';
+            body.appendChild(place);
+            const meta = document.createElement('span');
+            meta.className = 'quake-meta';
+            const depth = Number.isFinite(eq.depth) ? ` · ${eq.depth.toFixed(0)} km derinlik` : '';
+            meta.textContent = `${relativeTime(eq.timeMs)} · ${trTime(eq.timeMs, true)}${depth} · ` +
+                (event.readings.length > 1 ? `${event.readings.length} kaynak` : sourceLabel(eq));
+            body.appendChild(meta);
+            row.appendChild(body);
+            row.addEventListener('click', () => {
+                const marker = markers[i];
+                mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (quakeLayer.zoomToShowLayer) quakeLayer.zoomToShowLayer(marker, () => marker.openPopup());
+                else { map.setView(marker.getLatLng(), 9); marker.openPopup(); }
+            });
+            quakeListEl.appendChild(row);
+        });
+    }
 
     async function loadEarthquakes() {
         const range = (timeRangeSelect && timeRangeSelect.value) || '1_day';
         const minMag = Number((minMagSelect && minMagSelect.value) || 3.0);
+        // Eşleştirme için kaynaklardan biraz daha küçük depremler de istenir (büyüklükler kaynağa göre değişir).
+        const fetchMin = Math.max(0, minMag - 0.5);
         if (loadController) loadController.abort();
         loadController = new AbortController();
         const seq = ++loadSeq;
-        setModeStatus('quakes', 'Deprem verisi yükleniyor…', false);
+        if (!statusByMode.quakes) setModeStatus('quakes', 'Deprem verisi yükleniyor…', false);
 
-        for (const source of SOURCES) {
-            try {
-                const data = await fetchJson(source.url(range, minMag), source.timeoutMs, loadController.signal);
-                if (seq !== loadSeq) return;
-                const quakes = normalize(source.parse(data)).filter((q) => q.mag >= minMag);
-                quakeLayer.clearLayers();
-                quakes.forEach((q) => quakeLayer.addLayer(createMarker(q, source.name)));
-                const clock = clockNow();
-                setModeStatus('quakes', quakes.length
-                    ? `${quakes.length} deprem gösteriliyor · Kaynak: ${source.name} · Güncellendi: ${clock}`
-                    : `Seçilen aralıkta M ${minMag.toFixed(1)} ve üzeri deprem yok · Kaynak: ${source.name} · Güncellendi: ${clock}`, false);
-                return;
-            } catch (error) {
-                if (seq !== loadSeq) return; // yeni bir istek başladı
-            }
+        // Bütün kaynaklara aynı anda sorulur; yanıt verenler birleştirilir.
+        const results = await Promise.allSettled(SOURCES.map((source) =>
+            fetchJson(source.url(range, fetchMin), source.timeoutMs, loadController.signal)
+                .then((data) => normalize(source.parse(data)).map((q) => Object.assign(q, { source: source.short, sourceName: source.name })))));
+        if (seq !== loadSeq) return;
+
+        const lists = [], okNames = [], failedNames = [];
+        results.forEach((r, i) => {
+            if (r.status === 'fulfilled') { lists.push(r.value); okNames.push(`${SOURCES[i].short} (${r.value.filter((q) => q.mag >= minMag).length})`); }
+            else failedNames.push(SOURCES[i].short);
+        });
+        if (!lists.length) {
+            // Hiçbir kaynak yanıt vermedi: eski işaretler kalır, "deprem yok" izlenimi verilmez.
+            setModeStatus('quakes', 'Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
+            return;
         }
-        // Hiçbir kaynak yanıt vermedi: eski işaretler kalır, "deprem yok" izlenimi verilmez.
-        setModeStatus('quakes', 'Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
+
+        // Kaynaklardan herhangi biri depremi seçilen büyüklüğün üzerinde ölçtüyse gösterilir
+        // (bir kurum 2,9, diğeri 3,1 dediğinde deprem listeden düşmesin).
+        const events = mergeQuakes(lists).filter((ev) => ev.readings.some((r) => r.mag >= minMag));
+        quakeLayer.clearLayers();
+        const markers = events.map((ev) => createMarker(ev));
+        markers.forEach((m) => quakeLayer.addLayer(m));
+        renderQuakeList(events, markers);
+
+        const matched = events.filter((ev) => ev.readings.length > 1).length;
+        const parts = [
+            events.length ? `${events.length} deprem` : `Seçilen aralıkta M ${minMag.toFixed(1)} ve üzeri deprem yok`,
+            `Kaynaklar: ${okNames.join(', ')}`
+        ];
+        if (matched) parts.push(`${matched} deprem birden çok kaynakta eşleşti`);
+        if (failedNames.length) parts.push(`ulaşılamayan: ${failedNames.join(', ')}`);
+        parts.push(`Güncellendi: ${clockNow()}`);
+        setModeStatus('quakes', parts.join(' · '), false);
     }
 
     // ---- Katman düğmeleri ve kontroller ----
@@ -929,7 +1364,9 @@
         quakes: { layer: quakeLayer, load: () => loadEarthquakes() },
         weather: { layer: weatherLayer, load: (force) => loadWeather(force) },
         alerts: { layer: alertLayer, load: (force) => loadAlerts(force) },
-        thermal: { layer: thermalLayer, load: (force) => loadThermal(force) }
+        wind: { layer: windLayer, load: (force) => loadWind(force) },
+        rain: { layer: rainLayer, load: (force) => loadRain(force) },
+        thermal: { layer: fireGroup, load: (force) => loadThermal(force) }
     };
 
     function setMode(mode, remember) {
@@ -945,6 +1382,7 @@
         // kalırsa il alanlarının üzerine gelmeyi ve tıklamayı engeller. Kapalıyken kaldırılır,
         // katman yeniden açılınca Leaflet kendisi geri ekler.
         if (mode !== 'thermal' && map.hasLayer(thermalRenderer)) map.removeLayer(thermalRenderer);
+        if (mode !== 'wind') windStop(true);
         tabButtons.forEach((btn) => {
             const on = btn.dataset.mode === mode;
             btn.classList.toggle('active', on);
@@ -1012,6 +1450,7 @@
         new IntersectionObserver((entries) => {
             const wasOff = !mapOnScreen;
             mapOnScreen = entries[0].isIntersecting;
+            if (activeMode === 'wind') { if (mapOnScreen) windStart(); else windStop(false); }
             if (mapOnScreen && wasOff) MODES[activeMode].load(false); // geri gelince hemen tazele
         }).observe(mapEl);
     }
