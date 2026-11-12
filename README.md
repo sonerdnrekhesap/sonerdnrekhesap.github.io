@@ -1,54 +1,23 @@
-# ErkenUyar Website
+# erkenuyar.com
 
-ErkenUyar uygulaması için basit, modern ve responsive website.
+ErkenUyar uygulamasının sitesi. GitHub Pages üzerinden yayınlanır; `main` dalına yapılan her push canlı siteyi günceller.
 
-## Özellikler
+## Dosyalar
 
-- ✅ Modern ve temiz tasarım
-- ✅ Tam responsive (mobil, tablet, desktop)
-- ✅ Privacy Policy sayfası
-- ✅ Hakkında bölümü
-- ✅ Özellikler bölümü
-- ✅ Smooth scroll animasyonları
-- ✅ Mobil menü desteği
-- ✅ SEO dostu yapı
+- `index.html`: ana sayfa (özellikler, canlı harita, sık sorulan sorular)
+- `privacy.html`, `terms.html`, `support.html`: gizlilik politikası, kullanım koşulları, destek
+- `404.html`: bulunamayan sayfalar
+- `styles.css`: tüm sayfaların stili
+- `site.js`: menü, sık sorulan sorular ve haritanın gerektiğinde yüklenmesi
+- `map.js`: canlı harita (depremler, hava, rüzgâr, yağış, uyarılar, yangın)
+- `vendor/`: harita kütüphaneleri (Leaflet, MarkerCluster)
+- `data/tr-provinces.json`: il sınırları
+- `app-ads.txt`, `robots.txt`, `sitemap.xml`, `CNAME`: alan adı ve arama motoru dosyaları
 
-## Dosya Yapısı
+## Yerelde deneme
 
-```
-website/
-├── index.html      # Ana HTML dosyası
-├── styles.css      # CSS stilleri
-├── script.js       # JavaScript fonksiyonları
-└── README.md       # Bu dosya
+```bash
+python3 -m http.server 8000
 ```
 
-## Kullanım
-
-1. Tüm dosyaları bir web sunucusuna yükleyin
-2. `index.html` dosyasını tarayıcıda açın
-3. Veya basit bir HTTP sunucusu ile çalıştırın:
-   ```bash
-   # Python ile
-   python -m http.server 8000
-   
-   # Node.js ile (http-server)
-   npx http-server
-   ```
-
-## Özelleştirme
-
-- **Renkler**: `styles.css` dosyasındaki `:root` değişkenlerini düzenleyin
-- **İçerik**: `index.html` dosyasındaki metinleri güncelleyin
-- **Animasyonlar**: `script.js` dosyasındaki animasyon ayarlarını değiştirin
-
-## Tarayıcı Desteği
-
-- Chrome (son 2 versiyon)
-- Firefox (son 2 versiyon)
-- Safari (son 2 versiyon)
-- Edge (son 2 versiyon)
-
-## Lisans
-
-ErkenUyar projesi kapsamında.
+`styles.css`, `site.js` veya `map.js` değişince HTML dosyalarındaki `?v=` sürüm numarasını (ve `site.js` içindeki `V` değerini) bir artırın; aksi halde tarayıcılar eski dosyayı kullanır.
