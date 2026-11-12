@@ -1308,8 +1308,8 @@
         }
     }
 
-    // ---- Orman yangını tehlikesi (EFFIS / Copernicus) ----
-    // Avrupa Orman Yangını Bilgi Sistemi'nin günlük yangın hava indeksi (FWI) tahmini; anahtar gerektirmez.
+    // ---- Orman yangını tehlikesi (GWIS / Copernicus) ----
+    // Küresel Orman Yangını Bilgi Sistemi'nin günlük yangın hava indeksi (FWI) tahmini; anahtar gerektirmez.
     const fireDangerToggle = document.getElementById('fireDanger');
     const fireGroup = L.layerGroup([thermalLayer]);
     let fireDangerLayer = null;
@@ -1320,22 +1320,23 @@
         if (!thermalStatusText) return;
         const wanted = !fireDangerToggle || fireDangerToggle.checked;
         setModeStatus('thermal', thermalStatusText + (wanted && fwiState === 'failed'
-            ? ' · Orman yangını tehlikesi katmanı şu an alınamıyor (kaynak: EFFIS)' : ''), false);
+            ? ' · Orman yangını tehlikesi katmanı şu an alınamıyor (kaynak: GWIS)' : ''), false);
     }
     function syncFwiLegend() {
         const wanted = !fireDangerToggle || fireDangerToggle.checked;
         if (fwiLegendEl) fwiLegendEl.hidden = activeMode !== 'thermal' || !wanted || fwiState === 'failed';
     }
-    // Aynı veri (EFFIS yangın hava indeksi) Avrupa Komisyonu'nun iki adresinden yayımlanır. Biri yanıt
-    // vermezse (sertifika sorunu, kesinti) öbürü denenir; ikisi de vermezse durum satırında söylenir.
-    const FWI_HOSTS = ['https://maps.effis.emergency.copernicus.eu/effis', 'https://maps.wild-fire.eu/effis'];
+    // Küresel katman (GWIS, ECMWF tahmini) kullanılır: Avrupa katmanı (EFFIS mf010) 42°D'de bitiyor ve
+    // Van, Kars, Ağrı, Iğdır, Hakkâri gibi doğu illerini kapsamıyordu. Aynı veri Avrupa Komisyonu'nun iki
+    // adresinden yayımlanır; biri yanıt vermezse öbürü denenir, ikisi de vermezse durum satırında söylenir.
+    const FWI_HOSTS = ['https://maps.effis.emergency.copernicus.eu/gwis', 'https://maps.wild-fire.eu/gwis'];
     let fwiHost = 0;
     function addFireDangerLayer() {
         let loaded = 0, failed = 0;
         const layer = L.tileLayer.wms(FWI_HOSTS[fwiHost], {
-            layers: 'mf010.fwi', format: 'image/png', transparent: true, version: '1.1.1',
+            layers: 'ecmwf.fwi', format: 'image/png', transparent: true, version: '1.1.1',
             time: new Date().toISOString().slice(0, 10), pane: 'shapes', opacity: 0.6,
-            attribution: 'Yangın tehlikesi: EFFIS (Copernicus)'
+            attribution: 'Yangın tehlikesi: GWIS (Copernicus)'
         });
         const settle = () => {
             if (layer !== fireDangerLayer) return;
