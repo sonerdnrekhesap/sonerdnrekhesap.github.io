@@ -149,7 +149,8 @@
     function normalize(list) {
         const seen = new Set();
         const out = [];
-        for (const raw of list) {
+        for (const raw of list.slice(0, 2000)) {
+            if (!raw || typeof raw !== 'object') continue;
             const eq = {
                 id: String(raw.id ?? ''),
                 lat: Number(raw.lat), lon: Number(raw.lon), mag: Number(raw.mag),
@@ -680,12 +681,12 @@
     // MGM kaydı ilçe kodlarıyla gelir (9PPNN; PP = il plakası). İl bazında en yüksek seviye alınır.
     function aggregateAlerts(list) {
         const byPlate = new Map();
-        for (const alert of list) {
+        for (const alert of list.slice(0, 300)) {
             if (!alert || typeof alert !== 'object') continue;
             for (const level of Object.keys(ALERT_LEVELS)) {
-                const towns = alert.towns && Array.isArray(alert.towns[level]) ? alert.towns[level] : [];
+                const towns = alert.towns && Array.isArray(alert.towns[level]) ? alert.towns[level].slice(0, 2000) : [];
                 if (!towns.length) continue;
-                const hazards = alert.weather && Array.isArray(alert.weather[level]) ? alert.weather[level] : [];
+                const hazards = alert.weather && Array.isArray(alert.weather[level]) ? alert.weather[level].slice(0, 8) : [];
                 const text = alert.text && typeof alert.text[level] === 'string' ? alert.text[level] : '';
                 const plates = new Set();
                 for (const town of towns) {
@@ -1325,24 +1326,40 @@
         const wanted = !fireDangerToggle || fireDangerToggle.checked;
         if (fwiLegendEl) fwiLegendEl.hidden = activeMode !== 'thermal' || !wanted || fwiState === 'failed';
     }
+    // Aynı veri (EFFIS yangın hava indeksi) Avrupa Komisyonu'nun iki adresinden yayımlanır. Biri yanıt
+    // vermezse (sertifika sorunu, kesinti) öbürü denenir; ikisi de vermezse durum satırında söylenir.
+    const FWI_HOSTS = ['https://maps.effis.emergency.copernicus.eu/effis', 'https://maps.wild-fire.eu/effis'];
+    let fwiHost = 0;
+    function addFireDangerLayer() {
+        let loaded = 0, failed = 0;
+        const layer = L.tileLayer.wms(FWI_HOSTS[fwiHost], {
+            layers: 'mf010.fwi', format: 'image/png', transparent: true, version: '1.1.1',
+            time: new Date().toISOString().slice(0, 10), pane: 'shapes', opacity: 0.6,
+            attribution: 'Yangın tehlikesi: EFFIS (Copernicus)'
+        });
+        const settle = () => {
+            if (layer !== fireDangerLayer) return;
+            if (!loaded && failed && fwiHost < FWI_HOSTS.length - 1) {
+                // Bu adres yanıt vermiyor: sıradakine geç (sonraki açılışlarda da ondan başlanır).
+                fwiHost++;
+                fireGroup.removeLayer(layer);
+                addFireDangerLayer();
+                return;
+            }
+            const next = loaded ? 'ok' : (failed ? 'failed' : fwiState);
+            if (next === fwiState) return;
+            fwiState = next; syncFwiLegend(); showThermalStatus();
+        };
+        layer.on('tileload', () => { loaded++; settle(); });
+        layer.on('tileerror', () => { failed++; settle(); });
+        fireDangerLayer = layer;
+        fireGroup.addLayer(layer);
+    }
     function syncFireDanger() {
         const wanted = !fireDangerToggle || fireDangerToggle.checked;
         if (wanted && !fireDangerLayer) {
             fwiState = 'idle';
-            let loaded = 0, failed = 0;
-            fireDangerLayer = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
-                layers: 'mf010.fwi', format: 'image/png', transparent: true, version: '1.1.1',
-                time: new Date().toISOString().slice(0, 10), pane: 'shapes', opacity: 0.6,
-                attribution: 'Yangın tehlikesi: EFFIS (Copernicus)'
-            });
-            const settle = () => {
-                const next = loaded ? 'ok' : (failed ? 'failed' : fwiState);
-                if (next === fwiState) return;
-                fwiState = next; syncFwiLegend(); showThermalStatus();
-            };
-            fireDangerLayer.on('tileload', () => { loaded++; settle(); });
-            fireDangerLayer.on('tileerror', () => { failed++; settle(); });
-            fireGroup.addLayer(fireDangerLayer);
+            addFireDangerLayer();
         } else if (!wanted && fireDangerLayer) {
             fireGroup.removeLayer(fireDangerLayer);
             fireDangerLayer = null;
@@ -1739,4 +1756,22 @@
     const settle = () => { if (animating) return; map.invalidateSize({ pan: false }); if (!expanded) fitTurkey(false); };
     setTimeout(settle, 250);
     window.addEventListener('load', settle);
+    // Harita kutusunun ölçüsü pencere değişmeden de değişebilir (büyük hâlde alttaki bölmenin içeriği
+    // katmana göre uzayıp kısalır). Leaflet bunu kendisi fark etmez: haritanın altında boş şerit kalır,
+    // rüzgâr zemini kısa çizilir. Kutu izlenir, ölçü değişince harita yeniden oturtulur.
+    if ('ResizeObserver' in window) {
+        let resizeTimer = null;
+        new ResizeObserver(() => {
+            if (animating) return;
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (animating) return;
+                const before = map.getSize();
+                map.invalidateSize({ pan: false, animate: false });
+                const after = map.getSize();
+                if (before.x === after.x && before.y === after.y) return;
+                if (!expanded) fitTurkey(false);
+            }, 60);
+        }).observe(mapEl);
+    }
 })();

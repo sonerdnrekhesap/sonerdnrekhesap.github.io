@@ -3,6 +3,18 @@
 (function () {
     'use strict';
 
+    // Tıklama tuzağı koruması: site başka bir sitenin içine (çerçeveye) gömülürse içerik gösterilmez.
+    // GitHub Pages'te sunucu başlığı ayarlanamadığı için bu denetim burada yapılır.
+    if (window.top !== window.self) {
+        let sameSite = false;
+        try { sameSite = window.top.location.hostname === window.location.hostname; } catch (e) { sameSite = false; }
+        if (!sameSite) {
+            document.documentElement.style.display = 'none';
+            try { window.top.location = window.location.href; } catch (e) { /* tarayıcı izin vermezse içerik gizli kalır */ }
+            return;
+        }
+    }
+
     // Mobil menü
     const menuToggle = document.getElementById('menuToggle');
     const navMenu = document.getElementById('navMenu');
