@@ -35,7 +35,7 @@
     // Harita: kütüphane ve harita kodu sayfa açılışında değil, harita bölümüne yaklaşılınca yüklenir.
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
-    const V = '8';
+    const V = '9';
     const STYLES = ['vendor/leaflet/leaflet.css', 'vendor/markercluster/MarkerCluster.css', 'vendor/markercluster/MarkerCluster.Default.css'];
     const SCRIPTS = ['vendor/leaflet/leaflet.js', 'vendor/markercluster/leaflet.markercluster.js', `map.js?v=${V}`];
     const statusEl = document.getElementById('mapStatus');

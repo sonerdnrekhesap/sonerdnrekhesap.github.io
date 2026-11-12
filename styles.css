@@ -645,36 +645,6 @@ section {
     position: relative;
 }
 
-.map-canvas {
-    width: 100% !important;
-    height: min(70vh, 520px) !important;
-    min-height: 400px !important;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 
-        inset 0 1px 0 rgba(255,255,255,.35),
-        0 16px 36px rgba(0,0,0,.10);
-    background: #cfe8ff;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: relative;
-}
-
-/* Leaflet map container styles - ensure it fills the parent */
-#map.leaflet-container {
-    height: 100% !important;
-    width: 100% !important;
-    z-index: 1;
-    border-radius: 20px;
-}
-
-.map-canvas.leaflet-container {
-    height: 100% !important;
-    width: 100% !important;
-    z-index: 1;
-}
-
 .map-toolbar {
     display: flex;
     gap: 12px;
@@ -913,10 +883,6 @@ section {
 
 /* Responsive adjustments for new sections */
 @media (max-width: 768px) {
-    .map-canvas {
-        height: min(60vh, 400px);
-    }
-
     .map-toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -989,13 +955,6 @@ section {
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     box-sizing: border-box;
 }
-.eq-cluster {
-    background-color: #d32f2f; color: #fff; border-radius: 50%;
-    width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; border: 3px solid #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3); box-sizing: border-box;
-}
 .eq-popup { min-width: 200px; line-height: 1.5; }
 .eq-popup-title { display: block; font-size: 1.1em; margin-bottom: 2px; }
 .btn-map {
@@ -1026,26 +985,6 @@ section {
 }
 
 
-/* Harita üstü katman düğmeleri */
-.map-frame { position: relative; }
-.map-tabs {
-    position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5;
-    display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap;
-    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    pointer-events: none;
-}
-.map-tabs::-webkit-scrollbar { display: none; }
-.map-tab {
-    pointer-events: auto; flex: 0 0 auto;
-    border: none; border-radius: 999px; padding: 0.55rem 1rem;
-    font-size: 0.95rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-    background: rgba(255, 255, 255, 0.95); color: var(--text-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    transition: var(--transition);
-}
-.map-tab:hover { background: #fff; transform: translateY(-1px); }
-.map-tab.active { background: var(--primary-color); color: #fff; }
-.map-tab:focus-visible { outline: 3px solid rgba(33, 150, 243, 0.5); outline-offset: 2px; }
 [hidden] { display: none !important; }
 
 .wx-marker, .alert-marker { background: transparent !important; border: none !important; }
@@ -1070,12 +1009,6 @@ section {
 .legend-q2 { background: #1976d2; }
 .legend-q3 { background: #fbc02d; }
 .legend-a1 { background: #fdd835; }
-@media (max-width: 768px) {
-    .map-tabs { justify-content: flex-start; top: 10px; left: 10px; right: 10px; }
-    .map-tab { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
-}
-
-
 /* Afet uyarıları: il alanları, bilgi kutusu, özet kartları */
 .legend-swatch {
     display: inline-block; width: 14px; height: 10px; border-radius: 3px;
@@ -1131,14 +1064,6 @@ section {
 }
 
 
-/* Tekerlek ipucu: sayfa kaydırılırken harita tekerleği yutmaz */
-.map-wheel-hint {
-    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 1000;
-    background: rgba(31, 31, 31, 0.82); color: #fff; padding: 8px 14px; border-radius: 999px;
-    font-size: 0.85rem; pointer-events: none; white-space: nowrap;
-}
-
-
 /* Rüzgâr ölçeği, yangın tehlikesi renkleri, deprem kaynak tablosu ve son depremler listesi */
 .wind-scale-bar { background: linear-gradient(to right, #8cbeeb 0%, #50aaeb 12%, #3cbe96 24%, #b9d246 35%, #fabe32 47%, #fa8c28 59%, #e64646 76%, #a050be 100%); }
 .fwi-1 { background: #9cffc0; } .fwi-2 { background: #cde24e; } .fwi-3 { background: #e6ac00; }
@@ -1162,3 +1087,179 @@ section {
 .quake-body { display: flex; flex-direction: column; min-width: 0; }
 .quake-place { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .quake-meta { font-size: 0.82rem; color: var(--text-secondary); }
+
+
+/* ============================================================
+   Harita: dokununca büyüyen kart
+   Küçükken önizlemedir (sayfa kaydırmayı tutmaz); dokununca büyür, dışına dokununca küçülür.
+   ============================================================ */
+.map-card {
+    --map-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --map-blue: #0a66d8;
+    --map-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    position: relative; font-family: var(--map-font);
+}
+.map-frame {
+    position: relative; height: clamp(360px, 62vh, 520px);
+    border-radius: 22px; overflow: hidden; background: #dfe9f3;
+    box-shadow: 0 18px 40px rgba(15, 35, 60, 0.14), 0 2px 6px rgba(15, 35, 60, 0.08);
+    transition: transform 0.18s var(--map-ease), box-shadow 0.25s ease;
+}
+.map-card:not(.is-expanded) .map-frame:has(.map-cover:hover) { box-shadow: 0 22px 48px rgba(15, 35, 60, 0.2), 0 2px 6px rgba(15, 35, 60, 0.1); }
+.map-card:not(.is-expanded) .map-frame:has(.map-cover:active) { transform: scale(0.985); }
+.map-canvas { position: absolute; inset: 0; z-index: 1; background: #dfe9f3; }
+.map-canvas.leaflet-container { font-family: var(--map-font); }
+
+.map-cover {
+    position: absolute; inset: 0; z-index: 4; border: 0; padding: 0; background: transparent; cursor: zoom-in;
+    display: flex; align-items: flex-end; justify-content: center; -webkit-tap-highlight-color: transparent;
+}
+.map-cover-hint {
+    margin-bottom: 14px; padding: 8px 14px; border-radius: 999px;
+    background: rgba(28, 28, 30, 0.72); color: #fff; font: 600 13px/1.2 var(--map-font);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    opacity: 0; transform: translateY(6px); transition: opacity 0.2s ease, transform 0.25s var(--map-ease);
+}
+.map-cover:hover .map-cover-hint, .map-cover:focus-visible .map-cover-hint { opacity: 1; transform: none; }
+@media (hover: none) { .map-cover-hint { opacity: 1; transform: none; } }
+
+/* Katman seçici (bölmeli denetim) */
+.map-tabs {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 6;
+    display: flex; gap: 2px; padding: 3px; max-width: calc(100% - 24px);
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    border-radius: 13px; background: rgba(242, 242, 247, 0.8);
+    -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+.map-tabs::-webkit-scrollbar { display: none; }
+.map-tab {
+    flex: 0 0 auto; border: 0; background: transparent; border-radius: 10px; padding: 7px 14px;
+    font: 600 14px/1.25 var(--map-font); color: #3a3a3c; cursor: pointer; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+.map-tab:hover { background: rgba(0, 0, 0, 0.05); }
+.map-tab:active { transform: scale(0.96); }
+.map-tab.active { background: #fff; color: var(--map-blue); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.08); }
+.map-tab:focus-visible, .map-fab:focus-visible, .map-cover:focus-visible { outline: 3px solid rgba(10, 102, 216, 0.45); outline-offset: 2px; }
+
+/* Harita üstündeki yuvarlak düğmeler */
+.map-fabs { position: absolute; right: 12px; top: 64px; z-index: 6; display: flex; flex-direction: column; gap: 8px; }
+.map-fab {
+    width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer; color: var(--map-blue);
+    display: grid; place-items: center; background: rgba(255, 255, 255, 0.86);
+    -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 6px 18px rgba(0, 0, 0, 0.12);
+    -webkit-tap-highlight-color: transparent; transition: transform 0.12s ease, background 0.18s ease;
+}
+.map-fab:hover { background: #fff; }
+.map-fab:active { transform: scale(0.92); }
+.map-fab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.map-fab .icon-close { display: none; }
+.map-card.is-expanded .map-fab .icon-close { display: block; }
+.map-card.is-expanded .map-fab .icon-expand { display: none; }
+.map-fab.is-busy svg { animation: map-spin 0.8s linear infinite; }
+.map-fab.is-on { background: var(--map-blue); color: #fff; }
+@keyframes map-spin { to { transform: rotate(360deg); } }
+
+/* Haritanın altındaki (büyükken yanındaki) bilgi bölmesi */
+.map-panel { margin-top: 14px; }
+.map-toolbar { margin-top: 0; }
+.map-toolbar label { font: 500 14px/1.3 var(--map-font); color: #3a3a3c; }
+.map-toolbar select {
+    padding: 0.55rem 0.9rem; border-radius: 10px; background: #f2f2f7; box-shadow: none;
+    font: 600 15px/1.2 var(--map-font);
+}
+.map-toolbar select:hover { transform: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08); }
+.map-status { transition: opacity 0.2s ease; }
+.map-status.is-loading { opacity: 0.55; }
+.quake-row, .alert-card { transition: transform 0.15s var(--map-ease), box-shadow 0.2s ease; -webkit-tap-highlight-color: transparent; }
+.quake-row:active, .alert-card:active { transform: scale(0.98); }
+
+/* Büyük hâl */
+html.map-open { overflow: hidden; }
+.map-backdrop {
+    position: fixed; inset: 0; z-index: 1999; background: rgba(10, 20, 35, 0.45);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    opacity: 0; transition: opacity 0.32s ease;
+}
+.map-backdrop.show { opacity: 1; }
+.map-card.is-animating { position: fixed; z-index: 2000; overflow: hidden; margin: 0; }
+.map-card.is-expanded {
+    position: fixed; z-index: 2000; margin: 0;
+    top: 4vh; left: max(4vw, calc((100vw - 1500px) / 2)); width: min(92vw, 1500px); height: 92vh;
+    display: grid; grid-template-columns: minmax(0, 1fr) 360px;
+    background: #f2f2f7; border-radius: 26px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+.map-card.is-expanded .map-frame { height: 100%; border-radius: 0; box-shadow: none; }
+.map-card.is-expanded .map-cover { display: none; }
+.map-card.is-expanded .map-panel {
+    margin: 0; padding: 18px 16px 22px; overflow-y: auto; overscroll-behavior: contain; background: #f2f2f7;
+}
+.map-card.is-expanded .map-toolbar { justify-content: flex-start; }
+.map-card.is-expanded .map-status,
+.map-card.is-expanded .map-legend,
+.map-card.is-expanded .map-note { text-align: left; }
+.map-card.is-expanded .quake-list,
+.map-card.is-expanded .alert-summary { grid-template-columns: minmax(0, 1fr); }
+.map-card.is-expanded .map-panel > * { max-width: 100%; }
+.map-card.is-expanded .temp-scale-bar { width: 150px; }
+.map-card:not(.is-expanded) .leaflet-control-zoom { display: none; }
+
+@media (max-width: 900px) {
+    .map-tab { padding: 7px 10px; font-size: 13px; }
+    .map-tabs { justify-content: flex-start; }
+    .map-card.is-expanded {
+        top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; border-radius: 0;
+        grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto;
+    }
+    .map-card.is-expanded .map-panel {
+        position: relative; z-index: 7; max-height: 38vh; max-height: 38dvh; margin-top: -16px;
+        border-radius: 18px 18px 0 0; box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
+        padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+    }
+    .map-card.is-expanded .map-tabs { top: calc(10px + env(safe-area-inset-top)); }
+    .map-card.is-expanded .map-fabs { top: calc(60px + env(safe-area-inset-top)); }
+    .map-card.is-expanded .leaflet-bottom { bottom: 16px; }
+}
+
+/* Leaflet denetimleri ve bilgi kutuları */
+.map-canvas .leaflet-bar { border: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 6px 18px rgba(0, 0, 0, 0.12); }
+.map-canvas .leaflet-bar a {
+    width: 40px; height: 40px; line-height: 40px; color: var(--map-blue); font-weight: 500;
+    background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.map-canvas .leaflet-bar a.leaflet-disabled { color: #c7c7cc; background: rgba(255, 255, 255, 0.9); }
+.map-canvas .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22); }
+.map-canvas .leaflet-popup-content { margin: 14px 16px; max-width: min(300px, calc(100vw - 100px)) !important; font-size: 13.5px; }
+.map-canvas .leaflet-popup-close-button { top: 6px !important; right: 6px !important; width: 26px !important; height: 26px !important; border-radius: 50%; background: #f2f2f7; color: #8e8e93 !important; font: 18px/26px var(--map-font) !important; }
+.map-canvas .leaflet-control-attribution { font-size: 10px; background: rgba(255, 255, 255, 0.7); border-radius: 8px 0 0 0; }
+
+/* Deprem kümesi: nötr renk (büyüklük rengiyle karışmasın); halka içindeki en büyük depremin rengidir */
+.eq-cluster {
+    width: 40px; height: 40px; border-radius: 50%; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    background: #3a3a3c; color: #fff; font: 700 13px/1 var(--map-font);
+    border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.eq-cluster small { font-size: 9px; font-weight: 600; opacity: 0.8; margin-left: 1px; }
+.legend-cluster { background: #3a3a3c; }
+
+/* Konum noktası */
+.me-marker { background: transparent !important; border: 0 !important; }
+.me-dot {
+    width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box;
+    background: #0a84ff; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    animation: me-pulse 2s ease-out infinite;
+}
+@keyframes me-pulse {
+    0% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(10, 132, 255, 0.45); }
+    100% { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 0 16px rgba(10, 132, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .map-frame, .map-tab, .map-fab, .map-backdrop, .map-cover-hint, .quake-row, .alert-card { transition: none; }
+    .me-dot, .map-fab.is-busy svg { animation: none; }
+}

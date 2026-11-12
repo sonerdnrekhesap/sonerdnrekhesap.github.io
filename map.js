@@ -18,8 +18,14 @@
     const MGM_URL = 'https://mgm-uyari-toplayici.sonerdnrekhesap.workers.dev/raw';
     const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
     // [plaka, il, enlem, boylam] (il merkezi)
-    const PROVINCES = [[1,"Adana",37.0,35.3],[2,"Adıyaman",37.8,38.3],[3,"Afyonkarahisar",38.8,30.5],[4,"Ağrı",39.7,43.0],[5,"Amasya",40.7,35.8],[6,"Ankara",39.9,32.9],[7,"Antalya",36.9,30.7],[8,"Artvin",41.2,41.8],[9,"Aydın",37.8,27.8],[10,"Balıkesir",39.6,27.9],[11,"Bilecik",40.1,30.0],[12,"Bingöl",38.9,40.5],[13,"Bitlis",38.4,42.1],[14,"Bolu",40.7,31.6],[15,"Burdur",37.7,30.3],[16,"Bursa",40.2,29.1],[17,"Çanakkale",40.2,26.4],[18,"Çankırı",40.6,33.6],[19,"Çorum",40.5,34.9],[20,"Denizli",37.8,29.1],[21,"Diyarbakır",37.9,40.2],[22,"Edirne",41.7,26.6],[23,"Elazığ",38.7,39.2],[24,"Erzincan",39.8,39.5],[25,"Erzurum",39.9,41.3],[26,"Eskişehir",39.8,30.5],[27,"Gaziantep",37.1,37.4],[28,"Giresun",40.9,38.4],[29,"Gümüşhane",40.5,39.5],[30,"Hakkari",37.6,43.7],[31,"Hatay",36.4,36.2],[32,"Isparta",37.8,30.6],[33,"Mersin",36.8,34.6],[34,"İstanbul",41.0,28.9],[35,"İzmir",38.4,27.1],[36,"Kars",40.6,43.1],[37,"Kastamonu",41.4,33.8],[38,"Kayseri",38.7,35.5],[39,"Kırklareli",41.7,27.2],[40,"Kırşehir",39.1,34.2],[41,"Kocaeli",40.8,29.9],[42,"Konya",37.9,32.5],[43,"Kütahya",39.4,29.9],[44,"Malatya",38.4,38.3],[45,"Manisa",38.6,27.4],[46,"Kahramanmaraş",37.6,36.9],[47,"Mardin",37.3,40.7],[48,"Muğla",37.2,28.4],[49,"Muş",38.7,41.5],[50,"Nevşehir",38.6,34.7],[51,"Niğde",37.9,34.7],[52,"Ordu",40.9,37.9],[53,"Rize",41.0,40.5],[54,"Sakarya",40.8,30.4],[55,"Samsun",41.3,36.3],[56,"Siirt",37.9,41.9],[57,"Sinop",42.0,35.2],[58,"Sivas",39.7,37.0],[59,"Tekirdağ",40.9,27.5],[60,"Tokat",40.3,36.6],[61,"Trabzon",41.0,39.7],[62,"Tunceli",39.1,39.5],[63,"Şanlıurfa",37.2,38.8],[64,"Uşak",38.7,29.4],[65,"Van",38.5,43.4],[66,"Yozgat",39.8,34.8],[67,"Zonguldak",41.5,31.8],[68,"Aksaray",38.4,34.0],[69,"Bayburt",40.3,40.2],[70,"Karaman",37.2,33.2],[71,"Kırıkkale",39.8,33.5],[72,"Batman",37.9,41.1],[73,"Şırnak",37.5,42.5],[74,"Bartın",41.6,32.3],[75,"Ardahan",41.1,42.7],[76,"Iğdır",39.9,44.0],[77,"Yalova",40.7,29.3],[78,"Karabük",41.2,32.6],[79,"Kilis",36.7,37.1],[80,"Osmaniye",37.1,36.2],[81,"Düzce",40.8,31.2]];
-    const POPUP_OPTS = { autoPanPaddingTopLeft: [12, 70], maxWidth: 300 };
+    const PROVINCES = [[1,"Adana",37.0,35.3],[2,"Adıyaman",37.8,38.3],[3,"Afyonkarahisar",38.8,30.5],[4,"Ağrı",39.7,43.0],[5,"Amasya",40.7,35.8],[6,"Ankara",39.9,32.9],[7,"Antalya",36.9,30.7],[8,"Artvin",41.2,41.8],[9,"Aydın",37.8,27.8],[10,"Balıkesir",39.6,27.9],[11,"Bilecik",40.1,30.0],[12,"Bingöl",38.9,40.5],[13,"Bitlis",38.4,42.1],[14,"Bolu",40.7,31.6],[15,"Burdur",37.7,30.3],[16,"Bursa",40.2,29.1],[17,"Çanakkale",40.15,26.41],[18,"Çankırı",40.6,33.6],[19,"Çorum",40.5,34.9],[20,"Denizli",37.8,29.1],[21,"Diyarbakır",37.9,40.2],[22,"Edirne",41.7,26.6],[23,"Elazığ",38.7,39.2],[24,"Erzincan",39.8,39.5],[25,"Erzurum",39.9,41.3],[26,"Eskişehir",39.8,30.5],[27,"Gaziantep",37.1,37.4],[28,"Giresun",40.9,38.4],[29,"Gümüşhane",40.5,39.5],[30,"Hakkari",37.6,43.7],[31,"Hatay",36.4,36.2],[32,"Isparta",37.8,30.6],[33,"Mersin",36.8,34.6],[34,"İstanbul",41.0,28.9],[35,"İzmir",38.4,27.1],[36,"Kars",40.6,43.1],[37,"Kastamonu",41.4,33.8],[38,"Kayseri",38.7,35.5],[39,"Kırklareli",41.7,27.2],[40,"Kırşehir",39.1,34.2],[41,"Kocaeli",40.8,29.9],[42,"Konya",37.9,32.5],[43,"Kütahya",39.4,29.9],[44,"Malatya",38.4,38.3],[45,"Manisa",38.6,27.4],[46,"Kahramanmaraş",37.6,36.9],[47,"Mardin",37.3,40.7],[48,"Muğla",37.2,28.4],[49,"Muş",38.7,41.5],[50,"Nevşehir",38.6,34.7],[51,"Niğde",37.9,34.7],[52,"Ordu",40.9,37.9],[53,"Rize",41.0,40.5],[54,"Sakarya",40.8,30.4],[55,"Samsun",41.3,36.3],[56,"Siirt",37.9,41.9],[57,"Sinop",42.02,35.15],[58,"Sivas",39.7,37.0],[59,"Tekirdağ",40.98,27.51],[60,"Tokat",40.3,36.6],[61,"Trabzon",41.0,39.7],[62,"Tunceli",39.1,39.5],[63,"Şanlıurfa",37.2,38.8],[64,"Uşak",38.7,29.4],[65,"Van",38.5,43.4],[66,"Yozgat",39.8,34.8],[67,"Zonguldak",41.45,31.79],[68,"Aksaray",38.4,34.0],[69,"Bayburt",40.3,40.2],[70,"Karaman",37.2,33.2],[71,"Kırıkkale",39.8,33.5],[72,"Batman",37.9,41.1],[73,"Şırnak",37.5,42.5],[74,"Bartın",41.6,32.3],[75,"Ardahan",41.1,42.7],[76,"Iğdır",39.9,44.0],[77,"Yalova",40.65,29.27],[78,"Karabük",41.2,32.6],[79,"Kilis",36.7,37.1],[80,"Osmaniye",37.1,36.2],[81,"Düzce",40.8,31.2]];
+    const POPUP_OPTS = { autoPanPaddingTopLeft: [12, 70], autoPanPaddingBottomRight: [60, 12], maxWidth: 300 };
+    // Açılışta gösterilen alan (Türkiye) ve haritanın gezilebildiği en geniş alan. Rüzgâr verisi bu
+    // geniş alanın tamamı için alınır; harita bunun dışına çıkamadığından kenarda boşluk kalmaz.
+    const TURKEY_BOUNDS = [[35.8, 25.7], [42.2, 44.9]];
+    const VIEW_BOUNDS = [[24.5, 14.5], [51.0, 56.0]];
+    // Harita kartının durumu: küçük (önizleme) ya da büyük; geçiş sürerken animating doğrudur.
+    let expanded = false, animating = false;
 
     const statusEl = document.getElementById('mapStatus');
     const minMagSelect = document.getElementById('minMag');
@@ -55,7 +61,39 @@
         return new Date(Date.now() - hours * 3600 * 1000).toISOString().slice(0, 19);
     }
 
-    // Deprem kaynakları, sırayla denenir. İlk yanıt veren kullanılır.
+    // Yer adları: Kandilli adları büyük harfle ve Türkçe karaktersiz yayımlar ("AKOLUK-FEKE (ADANA)").
+    // Ayrıntı (köy-ilçe) korunur, il adı eşleşmişse düzgün yazımıyla eklenir.
+    function titleCase(text, locale) {
+        return String(text).toLocaleLowerCase(locale).replace(/(^|[\s\-(/])([^\s\-(/])/g, (m, sep, ch) => sep + ch.toLocaleUpperCase(locale));
+    }
+    function koeriPlace(raw, matched) {
+        const rawText = typeof raw === 'string' ? raw.trim() : '';
+        const matchedText = typeof matched === 'string' ? matched.trim() : '';
+        if (matchedText.includes('(')) return titleCase(matchedText, 'tr');
+        const detail = titleCase(rawText.replace(/\s*\([^)]*\)\s*$/, '').replace(/-+$/, ''), 'en');
+        if (matchedText) return detail && detail.toLocaleLowerCase('tr') !== matchedText.toLocaleLowerCase('tr') ? `${detail} (${matchedText})` : matchedText;
+        return titleCase(rawText, 'en');
+    }
+    // EMSC bölge adları İngilizcedir; sık görülenler Türkçeleştirilir.
+    const REGION_TR = {
+        'WESTERN TURKEY': 'Batı Türkiye', 'CENTRAL TURKEY': 'Orta Türkiye', 'EASTERN TURKEY': 'Doğu Türkiye',
+        'NEAR THE COAST OF WESTERN TURKEY': 'Batı Türkiye kıyıları', 'AEGEAN SEA': 'Ege Denizi', 'BLACK SEA': 'Karadeniz',
+        'SEA OF MARMARA': 'Marmara Denizi', 'EASTERN MEDITERRANEAN SEA': 'Doğu Akdeniz', 'CYPRUS REGION': 'Kıbrıs bölgesi',
+        'TURKEY-SYRIA BORDER REGION': 'Türkiye-Suriye sınır bölgesi', 'TURKEY-IRAN BORDER REGION': 'Türkiye-İran sınır bölgesi',
+        'TURKEY-IRAQ BORDER REGION': 'Türkiye-Irak sınır bölgesi', 'TURKEY-SYRIA-IRAQ BORDER REGION': 'Türkiye-Suriye-Irak sınır bölgesi',
+        'GEORGIA-ARMENIA-TURKEY BORDER REG': 'Gürcistan-Ermenistan-Türkiye sınır bölgesi', 'ARMENIA-AZERBAIJAN-IRAN BORD REG': 'Ermenistan-Azerbaycan-İran sınır bölgesi',
+        'DODECANESE ISLANDS, GREECE': 'Onikiada (Yunanistan)', 'DODECANESE IS.-TURKEY BORDER REG': 'Onikiada-Türkiye sınır bölgesi',
+        'CRETE, GREECE': 'Girit (Yunanistan)', 'GREECE': 'Yunanistan', 'BULGARIA': 'Bulgaristan', 'SYRIA': 'Suriye', 'IRAQ': 'Irak',
+        'ARMENIA': 'Ermenistan', 'NORTHWESTERN IRAN': 'Kuzeybatı İran', 'WESTERN IRAN': 'Batı İran', 'IRAN-IRAQ BORDER REGION': 'İran-Irak sınır bölgesi',
+        "GEORGIA (SAK'ART'VELO)": 'Gürcistan', 'GREECE-BULGARIA BORDER REGION': 'Yunanistan-Bulgaristan sınır bölgesi'
+    };
+    function regionPlace(name) {
+        const key = typeof name === 'string' ? name.trim().toUpperCase() : '';
+        if (!key) return '';
+        return REGION_TR[key] || titleCase(key, 'en');
+    }
+
+    // Deprem kaynakları. Hepsine aynı anda sorulur; yanıt verenler birleştirilir. Sıra, önceliktir.
     const SOURCES = [
         {
             name: 'Kandilli Rasathanesi (KOERI)', short: 'KOERI',
@@ -68,7 +106,7 @@
                 return data.items.map((i) => ({
                     id: i.event_key || i.id,
                     lat: i.lat, lon: i.lon, mag: i.magnitude, depth: i.depth_km,
-                    place: i.matched_place || i.raw_place,
+                    place: koeriPlace(i.raw_place, i.matched_place),
                     time: i.occurred_at_utc, magType: i.magnitude_type
                 }));
             }
@@ -85,7 +123,7 @@
                 return data.features.map((f) => {
                     const p = f.properties || {};
                     return { id: f.id, lat: p.lat, lon: p.lon, mag: p.mag, depth: p.depth,
-                        place: p.flynn_region, time: p.time, magType: p.magtype, agency: p.auth };
+                        place: regionPlace(p.flynn_region), time: p.time, magType: p.magtype, agency: p.auth };
                 });
             }
         },
@@ -241,30 +279,33 @@
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2]
         });
-        const marker = L.marker([eq.lat, eq.lon], { icon, title: `M ${magText}` });
+        const marker = L.marker([eq.lat, eq.lon], { icon, title: `M ${magText}`, mag: eq.mag });
         marker.bindPopup(quakePopup(event), POPUP_OPTS);
         return marker;
     }
 
     // ---- Harita ----
-    const map = L.map(mapEl, { center: [39.0, 35.0], zoom: 6, minZoom: 5, maxZoom: 12, zoomControl: false,
-        scrollWheelZoom: false });
-    // Fare tekerleği: sayfa kaydırılırken harita tekerleği yutmasın. Haritaya tıklanınca tekerlekle
-    // yakınlaştırma açılır, fare haritadan çıkınca kapanır.
-    const wheelHint = document.createElement('div');
-    wheelHint.className = 'map-wheel-hint';
-    wheelHint.textContent = 'Tekerlekle yakınlaştırmak için haritaya tıklayın';
-    wheelHint.hidden = true;
-    mapEl.appendChild(wheelHint);
-    let wheelHintTimer = null;
-    map.on('click', () => { map.scrollWheelZoom.enable(); wheelHint.hidden = true; });
-    mapEl.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
-    mapEl.addEventListener('wheel', () => {
-        if (map.scrollWheelZoom.enabled()) return;
-        wheelHint.hidden = false;
-        clearTimeout(wheelHintTimer);
-        wheelHintTimer = setTimeout(() => { wheelHint.hidden = true; }, 1600);
-    }, { passive: true });
+    // Küçükken harita önizlemedir: sürüklenmez, yakınlaşmaz (telefonda sayfa kaydırmayı tutmasın).
+    // Büyütülünce bütün hareketler açılır (aşağıda, "Büyüt / küçült" bölümünde).
+    const map = L.map(mapEl, { center: [39.0, 35.3], zoom: 5, minZoom: 4, maxZoom: 12, zoomSnap: 0.25, zoomDelta: 0.5,
+        wheelPxPerZoomLevel: 90, zoomControl: false, maxBounds: VIEW_BOUNDS, maxBoundsViscosity: 1,
+        dragging: false, touchZoom: false, doubleClickZoom: false, scrollWheelZoom: false, boxZoom: false, keyboard: false });
+    function fitTurkey(animate) {
+        map.fitBounds(TURKEY_BOUNDS, { paddingTopLeft: [8, 56], paddingBottomRight: [8, 8], animate: Boolean(animate) });
+    }
+    // En uzak yakınlaştırma: görünen alan gezilebilir alanın dışına taşmayacak kadar.
+    function syncMinZoom() {
+        const size = map.getSize();
+        if (animating || !size.x || !size.y) return;
+        const min = Math.min(8, map.getBoundsZoom(VIEW_BOUNDS, true));
+        // Önce (animasyonsuz) yakınlaştır: setMinZoom kendi başına animasyonlu yakınlaştırır ve hemen
+        // ardından gelen "Türkiye'ye oturt" çağrısını geri alır.
+        if (map.getZoom() < min) map.setView(map.getCenter(), min, { animate: false });
+        map.setMinZoom(min);
+    }
+    map.on('resize', () => { syncMinZoom(); if (!expanded && !animating) fitTurkey(false); });
+    syncMinZoom();
+    fitTurkey(false);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // İl alanları ayrı bir bölmede ve "multiply" karışımıyla çizilir: renk haritayı boyar ama
     // alttaki şehir adları ve yollar silikleşmez.
@@ -281,11 +322,15 @@
         ? L.markerClusterGroup({
             maxClusterRadius: 45,
             disableClusteringAtZoom: 11,
-            iconCreateFunction: (cluster) => L.divIcon({
-                html: `<div class="eq-cluster">${cluster.getChildCount()}</div>`,
-                className: 'marker-cluster',
-                iconSize: [40, 40]
-            })
+            // Küme nötr renktedir ve içindeki sayı adettir; halka, kümedeki en büyük depremin rengidir.
+            iconCreateFunction: (cluster) => {
+                const maxMag = cluster.getAllChildMarkers().reduce((m, c) => Math.max(m, c.options.mag || 0), 0);
+                return L.divIcon({
+                    html: `<div class="eq-cluster" style="border-color:${magnitudeColor(maxMag)};" title="${cluster.getChildCount()} deprem, en büyüğü M ${maxMag.toFixed(1)}">${cluster.getChildCount()}<small>×</small></div>`,
+                    className: 'earthquake-marker',
+                    iconSize: [40, 40]
+                });
+            }
         })
         : L.layerGroup();
 
@@ -305,17 +350,17 @@
     };
     // Sürekli sıcak görünen tesisler: buradaki noktalar yangın değil, sanayi kaynağı olarak etiketlenir.
     const INDUSTRIAL_ZONES = [
-        { lat: 40.85, lon: 29.30, r: 0.05, name: 'Tuzla sanayi bölgesi' },
-        { lat: 40.95, lon: 28.70, r: 0.03, name: 'Ambarlı santrali' },
-        { lat: 38.80, lon: 26.95, r: 0.04, name: 'Aliağa sanayi bölgesi' },
-        { lat: 40.77, lon: 29.93, r: 0.04, name: 'İzmit sanayi bölgesi' },
-        { lat: 38.20, lon: 36.90, r: 0.03, name: 'Afşin-Elbistan santrali' },
-        { lat: 39.20, lon: 27.60, r: 0.03, name: 'Soma santrali' },
-        { lat: 37.05, lon: 28.35, r: 0.03, name: 'Yatağan santrali' },
-        { lat: 36.85, lon: 28.20, r: 0.03, name: 'Kemerköy santrali' },
-        { lat: 36.60, lon: 36.20, r: 0.03, name: 'İskenderun demir-çelik' },
-        { lat: 41.20, lon: 32.65, r: 0.03, name: 'Karabük demir-çelik' },
-        { lat: 41.30, lon: 31.40, r: 0.03, name: 'Ereğli demir-çelik' }
+        { lat: 40.87, lon: 29.34, r: 0.06, name: 'Tuzla sanayi bölgesi' },
+        { lat: 40.98, lon: 28.69, r: 0.04, name: 'Ambarlı santrali' },
+        { lat: 38.81, lon: 26.94, r: 0.05, name: 'Aliağa sanayi bölgesi' },
+        { lat: 40.76, lon: 29.93, r: 0.05, name: 'İzmit sanayi bölgesi' },
+        { lat: 38.35, lon: 36.99, r: 0.05, name: 'Afşin-Elbistan santrali' },
+        { lat: 39.19, lon: 27.64, r: 0.04, name: 'Soma santrali' },
+        { lat: 37.33, lon: 28.10, r: 0.04, name: 'Yatağan santrali' },
+        { lat: 37.03, lon: 27.90, r: 0.04, name: 'Kemerköy santrali' },
+        { lat: 36.71, lon: 36.21, r: 0.05, name: 'İskenderun demir-çelik' },
+        { lat: 41.18, lon: 32.63, r: 0.04, name: 'Karabük demir-çelik' },
+        { lat: 41.26, lon: 31.42, r: 0.04, name: 'Ereğli demir-çelik' }
     ];
     const thermalRenderer = L.canvas({ padding: 0.5 });
     const thermalLayer = L.layerGroup();
@@ -442,9 +487,10 @@
             total += r.value.length;
         });
         thermalLoadedAt = Date.now();
-        setModeStatus('thermal', total
+        thermalStatusText = total
             ? `Son iki günde ${total} sıcak nokta · Kaynak: NASA VIIRS uyduları · Güncellendi: ${clockNow()}`
-            : `Son iki günde sıcak nokta algılanmadı · Kaynak: NASA VIIRS uyduları · Güncellendi: ${clockNow()}`, false);
+            : `Son iki günde sıcak nokta algılanmadı · Kaynak: NASA VIIRS uyduları · Güncellendi: ${clockNow()}`;
+        showThermalStatus();
     }
 
     // ---- Hava tahmini (il merkezleri) ----
@@ -455,16 +501,20 @@
         [[80, 81, 82], '🌧️', 'Sağanak yağışlı'], [[85, 86], '🌨️', 'Kar sağanağı'],
         [[95, 96, 99], '⛈️', 'Gök gürültülü sağanak']
     ];
-    function wmoInfo(code) {
+    function wmoInfo(code, isNight) {
         const hit = WMO.find((w) => w[0].includes(Number(code)));
-        return hit ? { icon: hit[1], text: hit[2] } : { icon: '🌡️', text: 'Bilinmiyor' };
+        if (!hit) return { icon: '🌡️', text: 'Bilinmiyor' };
+        // Gece: açık ve az bulutlu havada güneş yerine ay.
+        const icon = isNight && Number(code) <= 1 ? '🌙' : (isNight && Number(code) === 2 ? '☁️' : hit[1]);
+        return { icon, text: hit[2] };
     }
+    const isNightNow = (w) => w && w.current && Number(w.current.is_day) === 0;
     const weatherLayer = L.layerGroup();
     let weatherLoadedAt = 0;
     let weatherSeq = 0;
 
     function weatherBox(provinceName, w, compact) {
-        const now = wmoInfo(w.current.weather_code);
+        const now = wmoInfo(w.current.weather_code, isNightNow(w));
         const temp = Math.round(Number(w.current.temperature_2m));
         const box = document.createElement('div');
         box.className = compact ? '' : 'eq-popup';
@@ -510,7 +560,7 @@
 
     // İl merkezindeki kısa etiket (simge + sıcaklık). Üst üste binenler gizlenir.
     function weatherLabel(province, w) {
-        const now = wmoInfo(w.current.weather_code);
+        const now = wmoInfo(w.current.weather_code, isNightNow(w));
         const temp = Math.round(Number(w.current.temperature_2m));
         const icon = L.divIcon({
             html: `<div class="wx-label">${now.icon}<b>${temp}°</b></div>`,
@@ -590,7 +640,7 @@
         setModeStatus('weather', 'Hava tahmini yükleniyor…', false);
         const url = `${WEATHER_URL}?latitude=${PROVINCES.map((p) => p[2]).join(',')}` +
             `&longitude=${PROVINCES.map((p) => p[3]).join(',')}` +
-            '&current=temperature_2m,weather_code,wind_speed_10m' +
+            '&current=temperature_2m,weather_code,wind_speed_10m,is_day' +
             '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
             '&forecast_days=3&timezone=Europe%2FIstanbul';
         try {
@@ -624,6 +674,7 @@
     }
     const alertLayer = L.layerGroup();
     const alertCache = {}; // gün → { at, provinces }
+    let alertShown = null; // haritada şu an çizili olan önbellek kaydı
     let alertSeq = 0;
 
     // MGM kaydı ilçe kodlarıyla gelir (9PPNN; PP = il plakası). İl bazında en yüksek seviye alınır.
@@ -891,8 +942,9 @@
                         const layer = shapeLayersByPlate.get(p[0]);
                         if (layer && layer.getBounds) bounds.extend(layer.getBounds()); else bounds.extend([p[2], p[3]]);
                     });
-                    if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 70], maxZoom: 8 });
-                    mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setExpanded(true, () => {
+                        if (bounds.isValid()) map.flyToBounds(bounds, { paddingTopLeft: [30, 70], paddingBottomRight: [30, 30], maxZoom: 8, duration: 0.6 });
+                    });
                 });
                 alertSummaryEl.appendChild(card);
             });
@@ -913,14 +965,17 @@
             } catch (error) {
                 if (seq !== alertSeq) return;
                 // Kaynağa ulaşılamadıysa "uyarı yok" denmez.
+                alertShown = null;
                 alertLayer.clearLayers();
                 if (alertSummaryEl) alertSummaryEl.textContent = '';
                 setModeStatus('alerts', 'MGM uyarılarına şu an ulaşılamıyor. Güncel uyarılar için mgm.gov.tr adresine bakın.', true);
                 return;
             }
         }
+        if (alertShown === cached) return; // aynı veri zaten haritada
         const count = await renderAlerts(cached.provinces, seq);
         if (count < 0 || seq !== alertSeq) return;
+        alertShown = cached;
         renderAlertSummary(cached.provinces);
         const clock = new Date(cached.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
         setModeStatus('alerts', count
@@ -929,9 +984,11 @@
         // Bugün uyarı yoksa yarın için yayımlanmış uyarı olup olmadığı da belirtilir.
         if (!count && day === 'today') {
             try {
-                const next = await fetchJson(`${MGM_URL}?which=tomorrow`, 15000);
-                if (seq !== alertSeq || !next || next.ok !== true || !Array.isArray(next.data)) return;
-                alertCache.tomorrow = { at: Date.now(), provinces: aggregateAlerts(next.data) };
+                if (!alertCache.tomorrow || Date.now() - alertCache.tomorrow.at > 10 * 60 * 1000) {
+                    const next = await fetchJson(`${MGM_URL}?which=tomorrow`, 15000);
+                    if (seq !== alertSeq || !next || next.ok !== true || !Array.isArray(next.data)) return;
+                    alertCache.tomorrow = { at: Date.now(), provinces: aggregateAlerts(next.data) };
+                }
                 const n = alertCache.tomorrow.provinces.size;
                 if (n) {
                     setModeStatus('alerts', `MGM'ye göre bugün için yürürlükte uyarı yok; yarın için ${n} ilde uyarı var ("Uyarı günü"nden Yarın'ı seçin) · Güncellendi: ${clock}`, false);
@@ -943,9 +1000,14 @@
     // ---- Rüzgâr haritası (hareketli) ----
     // Veri: Open-Meteo, 1°'lik ızgarada anlık rüzgâr hızı ve yönü. Izgara aralarında doğrusal ara
     // değer alınır; parçacıklar rüzgâr yönünde akar, zemin rüzgâr hızına göre renklenir.
-    const WIND = { minLat: 34, maxLat: 44, minLon: 24, maxLon: 46, step: 1, refreshMs: 30 * 60 * 1000 };
-    WIND.rows = (WIND.maxLat - WIND.minLat) / WIND.step + 1;
-    WIND.cols = (WIND.maxLon - WIND.minLon) / WIND.step + 1;
+    // İki ızgara: Türkiye üzerinde sık (1°), gezilebilir alanın tamamında seyrek (2,5°). İkisi sınırda
+    // yumuşakça birbirine karışır; böylece uzaklaşınca da haritanın her yerinde rüzgâr görünür.
+    function makeGrid(minLat, maxLat, minLon, maxLon, step) {
+        return { minLat, maxLat, minLon, maxLon, step, rows: Math.round((maxLat - minLat) / step) + 1, cols: Math.round((maxLon - minLon) / step) + 1 };
+    }
+    const WIND_INNER = makeGrid(34, 44, 24, 46, 1);
+    const WIND_OUTER = makeGrid(24, 51.5, 14, 56.5, 2.5);
+    const WIND = { refreshMs: 30 * 60 * 1000, blendDeg: 1.5 };
     // km/sa → renk (açık tonlar; zemin haritayla çarpılarak boyanır, yazılar okunur kalır)
     const WIND_SCALE = [
         [0, [140, 190, 235]], [10, [80, 170, 235]], [20, [60, 190, 150]], [30, [185, 210, 70]],
@@ -978,24 +1040,39 @@
     const windLayer = L.layerGroup(); // katman düğmeleri için yer tutucu
     const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let windField = null; // { u, v, gust } Float32Array (rows × cols), km/sa
+    let windField = null; // { inner, outer }; her biri { u, v, gust } Float32Array (rows × cols), km/sa ya da null
+    let windLastTs = 0;
     let windLoadedAt = 0;
     let windSeq = 0;
     let windParticles = [];
     let windFrame = null;
     let windRunning = false;
 
-    function windAt(lat, lon) {
-        if (!windField) return null;
-        const y = (lat - WIND.minLat) / WIND.step, x = (lon - WIND.minLon) / WIND.step;
-        if (x < 0 || y < 0 || x > WIND.cols - 1 || y > WIND.rows - 1) return null;
-        const x0 = Math.min(WIND.cols - 2, Math.floor(x)), y0 = Math.min(WIND.rows - 2, Math.floor(y));
+    function sampleGrid(grid, field, lat, lon) {
+        if (!field) return null;
+        const y = (lat - grid.minLat) / grid.step, x = (lon - grid.minLon) / grid.step;
+        if (x < 0 || y < 0 || x > grid.cols - 1 || y > grid.rows - 1) return null;
+        const x0 = Math.min(grid.cols - 2, Math.floor(x)), y0 = Math.min(grid.rows - 2, Math.floor(y));
         const fx = x - x0, fy = y - y0;
-        const at = (arr, r, c) => arr[r * WIND.cols + c];
+        const at = (arr, r, c) => arr[r * grid.cols + c];
         const mix = (arr) => at(arr, y0, x0) * (1 - fx) * (1 - fy) + at(arr, y0, x0 + 1) * fx * (1 - fy) +
             at(arr, y0 + 1, x0) * (1 - fx) * fy + at(arr, y0 + 1, x0 + 1) * fx * fy;
-        const u = mix(windField.u), v = mix(windField.v);
-        return { u, v, speed: Math.hypot(u, v), gust: mix(windField.gust) };
+        return { u: mix(field.u), v: mix(field.v), gust: mix(field.gust) };
+    }
+    function windAt(lat, lon) {
+        if (!windField) return null;
+        const inner = sampleGrid(WIND_INNER, windField.inner, lat, lon);
+        const outer = sampleGrid(WIND_OUTER, windField.outer, lat, lon);
+        let w = inner || outer;
+        if (inner && outer) {
+            // Sık ızgaranın kenarına yaklaştıkça seyrek ızgaraya geçilir (dikiş izi kalmasın).
+            const edge = Math.min(lat - WIND_INNER.minLat, WIND_INNER.maxLat - lat, lon - WIND_INNER.minLon, WIND_INNER.maxLon - lon);
+            const k = Math.max(0, Math.min(1, edge / WIND.blendDeg));
+            w = { u: outer.u + (inner.u - outer.u) * k, v: outer.v + (inner.v - outer.v) * k, gust: outer.gust + (inner.gust - outer.gust) * k };
+        }
+        if (!w) return null;
+        w.speed = Math.hypot(w.u, w.v);
+        return w;
     }
 
     function sizeWindCanvases() {
@@ -1041,7 +1118,7 @@
     }
 
     function spawnParticle(size) {
-        return { x: Math.random() * size.x, y: Math.random() * size.y, age: Math.floor(Math.random() * 60), life: 60 + Math.random() * 60 };
+        return { x: Math.random() * size.x, y: Math.random() * size.y, age: Math.random() * 2, life: 2.5 + Math.random() * 3 };
     }
 
     function resetWind() {
@@ -1049,8 +1126,9 @@
         const size = sizeWindCanvases();
         drawWindBackground(size);
         windCtx.clearRect(0, 0, size.x, size.y);
-        const count = Math.round(Math.min(1400, Math.max(300, size.x * size.y / 520)));
+        const count = Math.round(Math.min(1600, Math.max(300, size.x * size.y / 520)));
         windParticles = Array.from({ length: count }, () => spawnParticle(size));
+        windLastTs = 0;
         if (reducedMotion) drawWindArrows(size);
     }
 
@@ -1076,20 +1154,24 @@
         }
     }
 
-    function stepWind() {
+    // Akış hızı kare sayısına değil geçen süreye bağlıdır (120 Hz ekranda iki kat hızlı akmasın).
+    // 6. yakınlaştırmada 20 km/sa'lik rüzgâr saniyede yaklaşık 17 piksel ilerler: yön okunur, göz yorulmaz.
+    function stepWind(ts) {
         windFrame = null;
         if (!windRunning || !windField) return;
+        const dt = windLastTs ? Math.min(0.05, (ts - windLastTs) / 1000) : 0.016;
+        windLastTs = ts;
         const size = map.getSize();
         // Önceki kareyi soldur: izler kuyruk bırakır.
         windCtx.globalCompositeOperation = 'destination-in';
-        windCtx.fillStyle = 'rgba(0, 0, 0, 0.93)';
+        windCtx.fillStyle = `rgba(0, 0, 0, ${Math.pow(0.955, dt * 60).toFixed(4)})`;
         windCtx.fillRect(0, 0, size.x, size.y);
         windCtx.globalCompositeOperation = 'source-over';
-        windCtx.lineWidth = 1.7;
+        windCtx.lineWidth = 1.5;
         windCtx.lineCap = 'round';
-        windCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        windCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
         windCtx.beginPath();
-        const pxPerKmh = 0.055 * Math.pow(1.35, map.getZoom() - 6); // yaklaşınca akış da hızlanır
+        const pxPerKmh = 0.85 * Math.pow(1.22, map.getZoom() - 6) * dt;
         for (const p of windParticles) {
             const ll = map.containerPointToLatLng([p.x, p.y]);
             const wind = windAt(ll.lat, ll.lng);
@@ -1100,13 +1182,13 @@
             const nx = p.x + wind.u * pxPerKmh, ny = p.y - wind.v * pxPerKmh;
             windCtx.moveTo(p.x, p.y);
             windCtx.lineTo(nx, ny);
-            p.x = nx; p.y = ny; p.age++;
+            p.x = nx; p.y = ny; p.age += dt;
         }
         windCtx.stroke();
         // Beyaz izlerin açık zeminde de seçilmesi için ince koyu gölge.
         windCtx.globalCompositeOperation = 'destination-over';
-        windCtx.strokeStyle = 'rgba(20, 40, 60, 0.35)';
-        windCtx.lineWidth = 3.2;
+        windCtx.strokeStyle = 'rgba(20, 40, 60, 0.3)';
+        windCtx.lineWidth = 3;
         windCtx.stroke();
         windCtx.globalCompositeOperation = 'source-over';
         windFrame = requestAnimationFrame(stepWind);
@@ -1125,7 +1207,7 @@
         if (windFrame) { cancelAnimationFrame(windFrame); windFrame = null; }
         if (hide) { windBgPane.style.display = 'none'; windPane.style.display = 'none'; }
     }
-    map.on('moveend zoomend resize', () => { if (activeMode === 'wind' && windField) resetWind(); });
+    map.on('moveend zoomend resize', () => { if (activeMode === 'wind' && windField && !animating) resetWind(); });
     document.addEventListener('visibilitychange', () => {
         if (activeMode !== 'wind') return;
         if (document.hidden) windStop(false); else windStart();
@@ -1150,37 +1232,52 @@
         L.popup(POPUP_OPTS).setLatLng(e.latlng).setContent(box).openOn(map);
     });
 
+    function windUrl(grid) {
+        const lats = [], lons = [];
+        for (let r = 0; r < grid.rows; r++) {
+            for (let c = 0; c < grid.cols; c++) { lats.push(grid.minLat + r * grid.step); lons.push(grid.minLon + c * grid.step); }
+        }
+        return `${WEATHER_URL}?latitude=${lats.join(',')}&longitude=${lons.join(',')}` +
+            '&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh';
+    }
+    function windFieldFrom(grid, data) {
+        const n = grid.rows * grid.cols;
+        if (!Array.isArray(data) || data.length !== n) throw new Error('bad_format');
+        const field = { u: new Float32Array(n), v: new Float32Array(n), gust: new Float32Array(n), max: 0 };
+        data.forEach((d, i) => {
+            const speed = Number(d && d.current && d.current.wind_speed_10m) || 0;
+            const dir = (Number(d && d.current && d.current.wind_direction_10m) || 0) * Math.PI / 180;
+            field.u[i] = -speed * Math.sin(dir);
+            field.v[i] = -speed * Math.cos(dir);
+            field.gust[i] = Number(d && d.current && d.current.wind_gusts_10m) || speed;
+            if (speed > field.max) field.max = speed;
+        });
+        return field;
+    }
+
     async function loadWind(force) {
         if (!force && windField && Date.now() - windLoadedAt < WIND.refreshMs) { if (activeMode === 'wind') windStart(); return; }
         const seq = ++windSeq;
         if (!windField) setModeStatus('wind', 'Rüzgâr verisi yükleniyor…', false);
-        const lats = [], lons = [];
-        for (let r = 0; r < WIND.rows; r++) {
-            for (let c = 0; c < WIND.cols; c++) { lats.push(WIND.minLat + r * WIND.step); lons.push(WIND.minLon + c * WIND.step); }
-        }
-        try {
-            const data = await fetchJson(`${WEATHER_URL}?latitude=${lats.join(',')}&longitude=${lons.join(',')}` +
-                '&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh', 25000);
-            if (seq !== windSeq) return;
-            if (!Array.isArray(data) || data.length !== lats.length) throw new Error('bad_format');
-            const field = { u: new Float32Array(data.length), v: new Float32Array(data.length), gust: new Float32Array(data.length) };
-            let max = 0, maxAt = 0;
-            data.forEach((d, i) => {
-                const speed = Number(d && d.current && d.current.wind_speed_10m) || 0;
-                const dir = (Number(d && d.current && d.current.wind_direction_10m) || 0) * Math.PI / 180;
-                field.u[i] = -speed * Math.sin(dir);
-                field.v[i] = -speed * Math.cos(dir);
-                field.gust[i] = Number(d && d.current && d.current.wind_gusts_10m) || speed;
-                if (speed > max) { max = speed; maxAt = i; }
-            });
-            windField = field;
-            windLoadedAt = Date.now();
-            setModeStatus('wind', `Anlık rüzgâr · bölgede en yüksek ${Math.round(max)} km/sa · Kaynak: Open-Meteo · Güncellendi: ${clockNow()}`, false);
-            if (activeMode === 'wind') windStart();
-        } catch (error) {
-            if (seq !== windSeq) return;
+        const [inner, outer] = await Promise.allSettled([
+            fetchJson(windUrl(WIND_INNER), 25000).then((d) => windFieldFrom(WIND_INNER, d)),
+            fetchJson(windUrl(WIND_OUTER), 25000).then((d) => windFieldFrom(WIND_OUTER, d))
+        ]);
+        if (seq !== windSeq) return;
+        if (inner.status !== 'fulfilled' && outer.status !== 'fulfilled') {
             if (!windField) setModeStatus('wind', 'Rüzgâr verisi şu an alınamıyor.', true);
+            return;
         }
+        // Biri alınamadıysa eldeki eski veri korunur.
+        windField = {
+            inner: inner.status === 'fulfilled' ? inner.value : (windField && windField.inner) || null,
+            outer: outer.status === 'fulfilled' ? outer.value : (windField && windField.outer) || null
+        };
+        windLoadedAt = Date.now();
+        const max = windField.inner ? windField.inner.max : windField.outer.max;
+        setModeStatus('wind', `Anlık rüzgâr · Türkiye ve çevresinde en yüksek ${Math.round(max)} km/sa · Kaynak: Open-Meteo · Güncellendi: ${clockNow()}` +
+            (windField.inner && windField.outer ? '' : ' · verinin bir bölümü alınamadı'), false);
+        if (activeMode === 'wind') windStart();
     }
 
     // ---- Yağış radarı ----
@@ -1215,19 +1312,43 @@
     const fireDangerToggle = document.getElementById('fireDanger');
     const fireGroup = L.layerGroup([thermalLayer]);
     let fireDangerLayer = null;
+    const fwiLegendEl = document.getElementById('fwiLegend');
+    let fwiState = 'idle'; // idle | ok | failed
+    let thermalStatusText = '';
+    function showThermalStatus() {
+        if (!thermalStatusText) return;
+        const wanted = !fireDangerToggle || fireDangerToggle.checked;
+        setModeStatus('thermal', thermalStatusText + (wanted && fwiState === 'failed'
+            ? ' · Orman yangını tehlikesi katmanı şu an alınamıyor (kaynak: EFFIS)' : ''), false);
+    }
+    function syncFwiLegend() {
+        const wanted = !fireDangerToggle || fireDangerToggle.checked;
+        if (fwiLegendEl) fwiLegendEl.hidden = activeMode !== 'thermal' || !wanted || fwiState === 'failed';
+    }
     function syncFireDanger() {
         const wanted = !fireDangerToggle || fireDangerToggle.checked;
         if (wanted && !fireDangerLayer) {
+            fwiState = 'idle';
+            let loaded = 0, failed = 0;
             fireDangerLayer = L.tileLayer.wms('https://maps.effis.emergency.copernicus.eu/effis', {
                 layers: 'mf010.fwi', format: 'image/png', transparent: true, version: '1.1.1',
                 time: new Date().toISOString().slice(0, 10), pane: 'shapes', opacity: 0.6,
                 attribution: 'Yangın tehlikesi: EFFIS (Copernicus)'
             });
+            const settle = () => {
+                const next = loaded ? 'ok' : (failed ? 'failed' : fwiState);
+                if (next === fwiState) return;
+                fwiState = next; syncFwiLegend(); showThermalStatus();
+            };
+            fireDangerLayer.on('tileload', () => { loaded++; settle(); });
+            fireDangerLayer.on('tileerror', () => { failed++; settle(); });
             fireGroup.addLayer(fireDangerLayer);
         } else if (!wanted && fireDangerLayer) {
             fireGroup.removeLayer(fireDangerLayer);
             fireDangerLayer = null;
+            fwiState = 'idle';
         }
+        syncFwiLegend(); showThermalStatus();
     }
     if (fireDangerToggle) fireDangerToggle.addEventListener('change', syncFireDanger);
     syncFireDanger();
@@ -1305,15 +1426,21 @@
             row.appendChild(body);
             row.addEventListener('click', () => {
                 const marker = markers[i];
-                mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                if (quakeLayer.zoomToShowLayer) quakeLayer.zoomToShowLayer(marker, () => marker.openPopup());
-                else { map.setView(marker.getLatLng(), 9); marker.openPopup(); }
+                setExpanded(true, () => {
+                    if (quakeLayer.zoomToShowLayer) quakeLayer.zoomToShowLayer(marker, () => marker.openPopup());
+                    else { map.setView(marker.getLatLng(), 9); marker.openPopup(); }
+                });
             });
             quakeListEl.appendChild(row);
         });
     }
 
-    async function loadEarthquakes() {
+    let quakeSig = '';
+    let openQuakeKey = null;
+    const quakeKey = (ev) => `${ev.primary.source}:${ev.primary.id || ev.primary.timeMs}`;
+
+    // byUser: kullanıcı bir seçimi değiştirdi ya da Yenile'ye bastı (hemen "yükleniyor" yazılır).
+    async function loadEarthquakes(byUser) {
         const range = (timeRangeSelect && timeRangeSelect.value) || '1_day';
         const minMag = Number((minMagSelect && minMagSelect.value) || 3.0);
         // Eşleştirme için kaynaklardan biraz daha küçük depremler de istenir (büyüklükler kaynağa göre değişir).
@@ -1321,47 +1448,73 @@
         if (loadController) loadController.abort();
         loadController = new AbortController();
         const seq = ++loadSeq;
-        if (!statusByMode.quakes) setModeStatus('quakes', 'Deprem verisi yükleniyor…', false);
+        if (byUser || !statusByMode.quakes) setModeStatus('quakes', 'Depremler yükleniyor…', false);
 
-        // Bütün kaynaklara aynı anda sorulur; yanıt verenler birleştirilir.
-        const results = await Promise.allSettled(SOURCES.map((source) =>
+        const lists = SOURCES.map(() => null), state = SOURCES.map(() => 'pending'), rawCounts = SOURCES.map(() => 0);
+
+        const render = () => {
+            const pending = state.includes('pending');
+            const have = lists.filter(Boolean);
+            if (!have.length) {
+                // Hiçbir kaynak yanıt vermedi: eski işaretler kalır, "deprem yok" izlenimi verilmez.
+                if (!pending) setModeStatus('quakes', 'Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
+                return;
+            }
+            // Süzgeç, haritada yazan (öncelikli kaynağın) büyüklüğe göre uygulanır: "3.0+" seçiliyken
+            // işaretinde 2,9 yazan deprem görünmez.
+            const events = mergeQuakes(have).filter((ev) => ev.primary.mag >= minMag);
+            const sig = `${range}|${minMag}|` + events.map((ev) => `${quakeKey(ev)}:${ev.primary.mag}:${ev.readings.length}`).join(',');
+            // Veri değişmediyse harita yeniden çizilmez (açık bilgi kutusu ve açılmış kümeler bozulmasın).
+            if (sig !== quakeSig) {
+                quakeSig = sig;
+                const reopen = openQuakeKey;
+                quakeLayer.clearLayers();
+                const markers = events.map((ev) => {
+                    const marker = createMarker(ev), key = quakeKey(ev);
+                    marker.on('popupopen', () => { openQuakeKey = key; });
+                    marker.on('popupclose', () => { if (openQuakeKey === key) openQuakeKey = null; });
+                    return marker;
+                });
+                markers.forEach((m) => quakeLayer.addLayer(m));
+                renderQuakeList(events, markers);
+                if (reopen) {
+                    const i = events.findIndex((ev) => quakeKey(ev) === reopen);
+                    const shown = i >= 0 && (!quakeLayer.getVisibleParent || quakeLayer.getVisibleParent(markers[i]) === markers[i]);
+                    if (shown) markers[i].openPopup();
+                }
+            }
+            const names = (wanted) => SOURCES.filter((s, i) => state[i] === wanted).map((s) => s.short).join(', ');
+            const parts = [
+                events.length ? `${events.length} deprem` : `Seçilen aralıkta M ${minMag.toFixed(1)} ve üzeri deprem yok`,
+                `Kaynaklar: ${names('ok')}`
+            ];
+            if (pending) parts.push(`bekleniyor: ${names('pending')}`);
+            if (names('failed')) parts.push(`ulaşılamayan: ${names('failed')}`);
+            if (rawCounts[0] >= 300) parts.push('Kandilli listesi en yeni 300 kayıtla sınırlı; eski günler eksik olabilir');
+            if (!pending) parts.push(`Güncellendi: ${clockNow()}`);
+            setModeStatus('quakes', parts.join(' · '), false);
+        };
+
+        // Bütün kaynaklara aynı anda sorulur. Öncelikli kaynak (Kandilli) yanıt verince harita hemen
+        // çizilir; geç gelen kaynaklar eklendikçe güncellenir. En yavaş kaynak beklenmez.
+        await Promise.all(SOURCES.map((source, i) =>
             fetchJson(source.url(range, fetchMin), source.timeoutMs, loadController.signal)
-                .then((data) => normalize(source.parse(data)).map((q) => Object.assign(q, { source: source.short, sourceName: source.name })))));
-        if (seq !== loadSeq) return;
-
-        const lists = [], okNames = [], failedNames = [];
-        results.forEach((r, i) => {
-            if (r.status === 'fulfilled') { lists.push(r.value); okNames.push(`${SOURCES[i].short} (${r.value.filter((q) => q.mag >= minMag).length})`); }
-            else failedNames.push(SOURCES[i].short);
-        });
-        if (!lists.length) {
-            // Hiçbir kaynak yanıt vermedi: eski işaretler kalır, "deprem yok" izlenimi verilmez.
-            setModeStatus('quakes', 'Deprem verisi şu an alınamıyor. Resmî bilgi için AFAD ve Kandilli Rasathanesi\'ni takip edin.', true);
-            return;
-        }
-
-        // Kaynaklardan herhangi biri depremi seçilen büyüklüğün üzerinde ölçtüyse gösterilir
-        // (bir kurum 2,9, diğeri 3,1 dediğinde deprem listeden düşmesin).
-        const events = mergeQuakes(lists).filter((ev) => ev.readings.some((r) => r.mag >= minMag));
-        quakeLayer.clearLayers();
-        const markers = events.map((ev) => createMarker(ev));
-        markers.forEach((m) => quakeLayer.addLayer(m));
-        renderQuakeList(events, markers);
-
-        const matched = events.filter((ev) => ev.readings.length > 1).length;
-        const parts = [
-            events.length ? `${events.length} deprem` : `Seçilen aralıkta M ${minMag.toFixed(1)} ve üzeri deprem yok`,
-            `Kaynaklar: ${okNames.join(', ')}`
-        ];
-        if (matched) parts.push(`${matched} deprem birden çok kaynakta eşleşti`);
-        if (failedNames.length) parts.push(`ulaşılamayan: ${failedNames.join(', ')}`);
-        parts.push(`Güncellendi: ${clockNow()}`);
-        setModeStatus('quakes', parts.join(' · '), false);
+                .then((data) => {
+                    const parsed = source.parse(data);
+                    rawCounts[i] = parsed.length;
+                    lists[i] = normalize(parsed).map((q) => Object.assign(q, { source: source.short, sourceName: source.name }));
+                    state[i] = 'ok';
+                })
+                .catch(() => { state[i] = 'failed'; })
+                .then(() => {
+                    if (seq !== loadSeq) return;
+                    if (state[0] !== 'pending' || !state.includes('pending')) render();
+                })));
     }
 
     // ---- Katman düğmeleri ve kontroller ----
     const MODES = {
-        quakes: { layer: quakeLayer, load: () => loadEarthquakes() },
+        quakes: { layer: quakeLayer, load: (force) => loadEarthquakes(force) },
         weather: { layer: weatherLayer, load: (force) => loadWeather(force) },
         alerts: { layer: alertLayer, load: (force) => loadAlerts(force) },
         wind: { layer: windLayer, load: (force) => loadWind(force) },
@@ -1389,6 +1542,7 @@
             btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
         modeOnlyEls.forEach((el) => { el.hidden = !el.dataset.modeOnly.split(' ').includes(mode); });
+        syncFwiLegend();
         const st = statusByMode[mode];
         if (statusEl) {
             statusEl.textContent = st ? st.text : 'Yükleniyor…';
@@ -1408,35 +1562,161 @@
         timeRangeSelect.value = savedRange;
     }
 
+    // Yenile düğmesi yükleme sürerken döner.
+    function runLoad(force) {
+        if (refreshBtn) refreshBtn.classList.add('is-busy');
+        return Promise.resolve(MODES[activeMode].load(force)).catch(() => {})
+            .then(() => { if (refreshBtn) refreshBtn.classList.remove('is-busy'); });
+    }
+    // Geçici bilgi (konum hatası vb.) katmanın kendi durum metninin yerine kalıcı olarak geçmez.
+    function flashStatus(text) {
+        const mode = activeMode;
+        const previous = statusByMode[mode];
+        setModeStatus(mode, text, true);
+        setTimeout(() => {
+            const now = statusByMode[mode];
+            if (previous && now && now.text === text) setModeStatus(mode, previous.text, previous.isError);
+        }, 4000);
+    }
+
+    // ---- Büyüt / küçült ----
+    // Kart, bulunduğu yerden ekranı kaplayacak biçimde büyür; harita da onunla birlikte ölçeklenir.
+    // Dışına dokununca, Esc'ye ya da telefonun geri tuşuna basınca eski yerine küçülür.
+    const shellEl = document.getElementById('mapShell');
+    const cardEl = document.getElementById('mapCard');
+    const backdropEl = document.getElementById('mapBackdrop');
+    const coverEl = document.getElementById('mapCover');
+    const toggleBtn = document.getElementById('mapToggle');
+    const INTERACTIONS = ['dragging', 'touchZoom', 'doubleClickZoom', 'scrollWheelZoom', 'boxZoom', 'keyboard'];
+    const ANIM_MS = 420;
+    const idleQueue = [];
+
+    function syncInteractions() {
+        INTERACTIONS.forEach((name) => { if (map[name]) map[name][expanded ? 'enable' : 'disable'](); });
+        if (toggleBtn) {
+            const label = expanded ? 'Haritayı küçült' : 'Haritayı büyüt';
+            toggleBtn.setAttribute('aria-label', label);
+            toggleBtn.title = label;
+        }
+    }
+    function setCardRect(rect) {
+        cardEl.style.top = `${rect.top}px`; cardEl.style.left = `${rect.left}px`;
+        cardEl.style.width = `${rect.width}px`; cardEl.style.height = `${rect.height}px`;
+    }
+    function finishResize() {
+        animating = false;
+        cardEl.classList.remove('is-animating');
+        ['top', 'left', 'width', 'height', 'transition', 'borderRadius'].forEach((k) => { cardEl.style[k] = ''; });
+        if (!expanded) {
+            shellEl.style.minHeight = '';
+            backdropEl.hidden = true;
+            document.documentElement.classList.remove('map-open');
+        }
+        map.options.zoomSnap = 0.25;
+        map.invalidateSize({ pan: false, animate: false });
+        syncMinZoom();
+        fitTurkey(false);
+        syncInteractions();
+        if (activeMode === 'wind') windStart();
+        declutterWeatherLabels();
+        idleQueue.splice(0).forEach((fn) => fn());
+    }
+    function setExpanded(next, after) {
+        if (!cardEl || !shellEl || !backdropEl) { if (after) after(); return; }
+        if (animating) { if (after && next) idleQueue.push(after); return; }
+        if (next === expanded) { if (after) after(); return; }
+        if (after) idleQueue.push(after);
+        const first = cardEl.getBoundingClientRect();
+        if (next) {
+            shellEl.style.minHeight = `${shellEl.offsetHeight}px`;
+            backdropEl.hidden = false;
+            document.documentElement.classList.add('map-open');
+            try { history.pushState({ erkenuyarMap: true }, ''); } catch (e) { /* geçmiş kullanılamıyorsa sorun değil */ }
+        } else {
+            map.closePopup();
+        }
+        expanded = next;
+        cardEl.classList.toggle('is-expanded', next);
+        const last = cardEl.getBoundingClientRect();
+        requestAnimationFrame(() => backdropEl.classList.toggle('show', next));
+        if (activeMode === 'wind') windStop(true);
+        if (reducedMotion) { finishResize(); return; }
+
+        animating = true;
+        cardEl.classList.add('is-animating');
+        setCardRect(first);
+        cardEl.style.borderRadius = next ? '22px' : '26px';
+        void cardEl.offsetWidth; // başlangıç ölçüsü uygulansın
+        const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+        cardEl.style.transition = ['top', 'left', 'width', 'height', 'border-radius'].map((k) => `${k} ${ANIM_MS}ms ${ease}`).join(', ');
+        setCardRect(last);
+        cardEl.style.borderRadius = '';
+        // Geçiş boyunca harita her karede yeni ölçüye oturtulur: Türkiye kartla birlikte büyür.
+        map.options.zoomSnap = 0;
+        map.setMinZoom(2);
+        const tick = () => {
+            if (!animating) return;
+            map.invalidateSize({ pan: false, animate: false });
+            fitTurkey(false);
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        setTimeout(finishResize, ANIM_MS + 40);
+    }
+    function collapse() {
+        if (!expanded) return;
+        // Büyütürken geçmişe bir adım eklenmişti; geri alınınca "popstate" küçültür.
+        if (history.state && history.state.erkenuyarMap) history.back(); else setExpanded(false);
+    }
+    window.addEventListener('popstate', () => { if (expanded) setExpanded(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && expanded) collapse(); });
+    if (coverEl) coverEl.addEventListener('click', () => setExpanded(true));
+    if (backdropEl) backdropEl.addEventListener('click', collapse);
+    if (toggleBtn) toggleBtn.addEventListener('click', () => { if (expanded) collapse(); else setExpanded(true); });
+    syncInteractions();
+
+    // ---- Konum ----
+    let meLayer = null;
+    function showMyLocation(pos) {
+        const here = L.latLng(pos.coords.latitude, pos.coords.longitude);
+        if (!L.latLngBounds(VIEW_BOUNDS).contains(here)) { flashStatus('Konumunuz haritanın kapsadığı alanın dışında.'); return; }
+        if (meLayer) map.removeLayer(meLayer);
+        meLayer = L.layerGroup();
+        const accuracy = Number(pos.coords.accuracy);
+        if (Number.isFinite(accuracy) && accuracy > 50 && accuracy < 50000) {
+            meLayer.addLayer(L.circle(here, { radius: accuracy, color: '#0a84ff', weight: 1, opacity: 0.5,
+                fillColor: '#0a84ff', fillOpacity: 0.12, interactive: false }));
+        }
+        meLayer.addLayer(L.marker(here, {
+            icon: L.divIcon({ html: '<div class="me-dot"></div>', className: 'me-marker', iconSize: [18, 18], iconAnchor: [9, 9] }),
+            interactive: false, keyboard: false, zIndexOffset: 1000
+        }));
+        meLayer.addTo(map);
+        if (locateBtn) locateBtn.classList.add('is-on');
+        map.flyTo(here, Math.max(map.getZoom(), 8), { duration: 0.8 });
+    }
+
     tabButtons.forEach((btn) => btn.addEventListener('click', () => setMode(btn.dataset.mode, true)));
     if (minMagSelect) minMagSelect.addEventListener('change', () => {
         writePref('erkenuyar_minMag', minMagSelect.value);
-        loadEarthquakes();
+        runLoad(true);
     });
     if (timeRangeSelect) timeRangeSelect.addEventListener('change', () => {
         writePref('erkenuyar_timeRange', timeRangeSelect.value);
-        loadEarthquakes();
+        runLoad(true);
     });
     if (alertDaySelect) alertDaySelect.addEventListener('change', () => loadAlerts(false));
-    if (refreshBtn) refreshBtn.addEventListener('click', () => MODES[activeMode].load(true));
+    if (refreshBtn) refreshBtn.addEventListener('click', () => runLoad(true));
     // Konum yalnızca kullanıcı düğmeye basınca istenir (sayfa açılır açılmaz izin sorulmaz).
     if (locateBtn) {
         if (!navigator.geolocation) {
             locateBtn.hidden = true;
         } else {
             locateBtn.addEventListener('click', () => {
+                locateBtn.classList.add('is-busy');
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 8),
-                    () => {
-                        // Konum hatası katmanın kendi durum metninin yerine kalıcı olarak geçmesin.
-                        const mode = activeMode;
-                        const previous = statusByMode[mode];
-                        setModeStatus(mode, 'Konum alınamadı. Tarayıcı konum iznini kontrol edin.', true);
-                        setTimeout(() => {
-                            const now = statusByMode[mode];
-                            if (previous && now && now.text.startsWith('Konum alınamadı')) setModeStatus(mode, previous.text, previous.isError);
-                        }, 4000);
-                    },
+                    (pos) => { locateBtn.classList.remove('is-busy'); setExpanded(true, () => showMyLocation(pos)); },
+                    () => { locateBtn.classList.remove('is-busy'); flashStatus('Konum alınamadı. Tarayıcı konum iznini kontrol edin.'); },
                     { maximumAge: 5 * 60 * 1000, timeout: 10000 }
                 );
             });
@@ -1450,11 +1730,13 @@
         new IntersectionObserver((entries) => {
             const wasOff = !mapOnScreen;
             mapOnScreen = entries[0].isIntersecting;
+            if (animating) return;
             if (activeMode === 'wind') { if (mapOnScreen) windStart(); else windStop(false); }
             if (mapOnScreen && wasOff) MODES[activeMode].load(false); // geri gelince hemen tazele
         }).observe(mapEl);
     }
-    setInterval(() => { if (!document.hidden && mapOnScreen) MODES[activeMode].load(false); }, REFRESH_MS);
-    setTimeout(() => map.invalidateSize(), 250);
-    window.addEventListener('load', () => map.invalidateSize());
+    setInterval(() => { if (!document.hidden && mapOnScreen && !animating) MODES[activeMode].load(false); }, REFRESH_MS);
+    const settle = () => { if (animating) return; map.invalidateSize({ pan: false }); if (!expanded) fitTurkey(false); };
+    setTimeout(settle, 250);
+    window.addEventListener('load', settle);
 })();
